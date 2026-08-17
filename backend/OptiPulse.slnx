@@ -1,0 +1,32 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OptiPulse.Api/OptiPulse.Api.csproj" />
+    <Project Path="src/OptiPulse.IdentityAccess/OptiPulse.IdentityAccess.csproj" />
+    <Project Path="src/OptiPulse.SharedKernel/OptiPulse.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/AiGateway/">
+    <Project Path="src/AiGateway/OptiPulse.Ai.Application/OptiPulse.Ai.Application.csproj" />
+    <Project Path="src/AiGateway/OptiPulse.Ai.Domain/OptiPulse.Ai.Domain.csproj" />
+    <Project Path="src/AiGateway/OptiPulse.Ai.Infrastructure/OptiPulse.Ai.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/AuditTelemetry/">
+    <Project Path="src/AuditTelemetry/OptiPulse.Audit.Application/OptiPulse.Audit.Application.csproj" />
+    <Project Path="src/AuditTelemetry/OptiPulse.Audit.Domain/OptiPulse.Audit.Domain.csproj" />
+    <Project Path="src/AuditTelemetry/OptiPulse.Audit.Infrastructure/OptiPulse.Audit.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/EvaluationEngine/">
+    <Project Path="src/EvaluationEngine/OptiPulse.Evaluation.Application/OptiPulse.Evaluation.Application.csproj" />
+    <Project Path="src/EvaluationEngine/OptiPulse.Evaluation.Domain/OptiPulse.Evaluation.Domain.csproj" />
+    <Project Path="src/EvaluationEngine/OptiPulse.Evaluation.Infrastructure/OptiPulse.Evaluation.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/FlagManagement/">
+    <Project Path="src/FlagManagement/OptiPulse.Flags.Application/OptiPulse.Flags.Application.csproj" />
+    <Project Path="src/FlagManagement/OptiPulse.Flags.Domain/OptiPulse.Flags.Domain.csproj" />
+    <Project Path="src/FlagManagement/OptiPulse.Flags.Infrastructure/OptiPulse.Flags.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OptiPulse.Evaluation.Benchmarks/OptiPulse.Evaluation.Benchmarks.csproj" />
+    <Project Path="tests/OptiPulse.IntegrationTests/OptiPulse.IntegrationTests.csproj" />
+    <Project Path="tests/OptiPulse.UnitTests/OptiPulse.UnitTests.csproj" />
+  </Folder>
+</Solution>

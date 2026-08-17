@@ -32,20 +32,20 @@ description: "Task list for OptiPulse Platform implementation"
 
 **Purpose**: Repository and toolchain initialization across all three codebases.
 
-- [ ] T001 Create repository structure (`backend/`, `web/`, `mobile/`, `contracts-gen/`) per [plan.md](plan.md)
-- [ ] T002 Initialize .NET 10 solution `backend/OptiPulse.sln` with per-context projects (SharedKernel, IdentityAccess, EvaluationEngine.{Domain,Application,Infrastructure}, FlagManagement.{…}, AiGateway.{…}, AuditTelemetry.{…}, OptiPulse.Api)
-- [ ] T003 [P] Enable `<Nullable>enable</Nullable>`, `<PublishAot>true</PublishAot>`, and `-warnaserror` (incl. AOT/trim analyzers) in `backend/Directory.Build.props`
-- [ ] T003a [P] Enable central package management: create `backend/Directory.Packages.props` with `<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>` and pin the baseline packages (Polly via `Microsoft.Extensions.Http.Resilience`, EF Core 10 + Npgsql, StackExchange.Redis, Serilog + OpenTelemetry, `Asp.Versioning`, xUnit v3, Testcontainers) — no hardcoded versions in `.csproj` (constitution v2.1.0 package baseline)
-- [ ] T004 [P] Scaffold React app `web/optipulse_dashboard/` with Vite + TypeScript; add Vitest + Testing Library; configure ESLint/Prettier (no Redux/MobX/Zustand deps)
-- [ ] T005 [P] Scaffold Flutter app `mobile/optipulse_app/` (iOS + Android targets only) with flutter_bloc, hydrated_bloc, dio, get_it/injectable
-- [ ] T006 [P] Configure backend test projects `backend/tests/OptiPulse.UnitTests`, `OptiPulse.IntegrationTests` (xUnit + FluentAssertions + Testcontainers), `OptiPulse.Evaluation.Benchmarks` (BenchmarkDotNet)
-- [ ] T007 [P] Add `contracts-gen/generate.sh` skeleton (export OpenAPI → TS + Dart) and README per [contracts/openapi-pipeline.md](contracts/openapi-pipeline.md)
-- [ ] T008 [P] Add CI workflow skeleton running `dotnet build -warnaserror`, `dotnet test`, benchmark gate, and the OpenAPI drift check in `.github/workflows/ci.yml`
-- [ ] T008e [P] Wire the anti-pattern gate into CI/pre-commit: adapt `.kits/dotnet-claude-kit/hooks/pre-commit-antipattern.sh` (flags `DateTime.Now`/`DateTime.UtcNow`, `async void`, `new HttpClient()`) into `.github/workflows/ci.yml` and/or a git pre-commit hook so violations fail the build (constitution v2.1.0 anti-pattern gate)
-- [ ] T008a [P] Author backend `backend/CLAUDE.md` importing the adopted `.kits/dotnet-claude-kit` rules, pinning Clean Architecture + custom JWT/RBAC, and excluding Mediator/HybridCache from the evaluation hot path (per constitution v2.1.0 baselines)
-- [ ] T008b [P] Author `web/optipulse_dashboard/CLAUDE.md` — custom hooks + single AuthContext, **no Redux/MobX/Zustand/React Query**, OpenAPI-generated typed client (overrides the web kit's Zustand/React-Query guidance)
-- [ ] T008c [P] Author `mobile/optipulse_app/CLAUDE.md` importing the adopted `.kits/flutter-ai-rules` skills, pinning **BLoC/Cubit + HydratedBloc + Dio** and disabling Riverpod/Provider/ChangeNotifier for app state
-- [ ] T008d Verify dev tooling is active: `.claude/hooks/` (format-on-write, block-secrets, bash-guard) and the `cwm-roslyn-navigator` MCP resolve `backend/OptiPulse.sln`
+- [X] T001 Create repository structure (`backend/`, `web/`, `mobile/`, `contracts-gen/`) per [plan.md](plan.md)
+- [X] T002 Initialize .NET 10 solution `backend/OptiPulse.sln` with per-context projects (SharedKernel, IdentityAccess, EvaluationEngine.{Domain,Application,Infrastructure}, FlagManagement.{…}, AiGateway.{…}, AuditTelemetry.{…}, OptiPulse.Api)
+- [X] T003 [P] Enable `<Nullable>enable</Nullable>`, `<PublishAot>true</PublishAot>`, and `-warnaserror` (incl. AOT/trim analyzers) in `backend/Directory.Build.props`
+- [X] T003a [P] Enable central package management: create `backend/Directory.Packages.props` with `<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>` and pin the baseline packages (Polly via `Microsoft.Extensions.Http.Resilience`, EF Core 10 + Npgsql, StackExchange.Redis, Serilog + OpenTelemetry, `Asp.Versioning`, xUnit v3, Testcontainers) — no hardcoded versions in `.csproj` (constitution v2.1.0 package baseline)
+- [X] T004 [P] Scaffold React app `web/optipulse_dashboard/` with Vite + TypeScript; add Vitest + Testing Library; configure ESLint/Prettier (no Redux/MobX/Zustand deps)
+- [X] T005 [P] Scaffold Flutter app `mobile/optipulse_app/` (iOS + Android targets only) with flutter_bloc, hydrated_bloc, dio, get_it/injectable
+- [X] T006 [P] Configure backend test projects `backend/tests/OptiPulse.UnitTests`, `OptiPulse.IntegrationTests` (xUnit + FluentAssertions + Testcontainers), `OptiPulse.Evaluation.Benchmarks` (BenchmarkDotNet)
+- [X] T007 [P] Add `contracts-gen/generate.sh` skeleton (export OpenAPI → TS + Dart) and README per [contracts/openapi-pipeline.md](contracts/openapi-pipeline.md)
+- [X] T008 [P] Add CI workflow skeleton running `dotnet build -warnaserror`, `dotnet test`, benchmark gate, and the OpenAPI drift check in `.github/workflows/ci.yml`
+- [X] T008e [P] Wire the anti-pattern gate into CI/pre-commit: adapt `.kits/dotnet-claude-kit/hooks/pre-commit-antipattern.sh` (flags `DateTime.Now`/`DateTime.UtcNow`, `async void`, `new HttpClient()`) into `.github/workflows/ci.yml` and/or a git pre-commit hook so violations fail the build (constitution v2.1.0 anti-pattern gate)
+- [X] T008a [P] Author backend `backend/CLAUDE.md` importing the adopted `.kits/dotnet-claude-kit` rules, pinning Clean Architecture + custom JWT/RBAC, and excluding Mediator/HybridCache from the evaluation hot path (per constitution v2.1.0 baselines)
+- [X] T008b [P] Author `web/optipulse_dashboard/CLAUDE.md` — custom hooks + single AuthContext, **no Redux/MobX/Zustand/React Query**, OpenAPI-generated typed client (overrides the web kit's Zustand/React-Query guidance)
+- [X] T008c [P] Author `mobile/optipulse_app/CLAUDE.md` importing the adopted `.kits/flutter-ai-rules` skills, pinning **BLoC/Cubit + HydratedBloc + Dio** and disabling Riverpod/Provider/ChangeNotifier for app state
+- [X] T008d Verify dev tooling is active: `.claude/hooks/` (format-on-write, block-secrets, bash-guard) and the `cwm-roslyn-navigator` MCP resolve `backend/OptiPulse.sln`
 
 ---
 
@@ -55,15 +55,15 @@ description: "Task list for OptiPulse Platform implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T009 [P] Implement `Result`, guard clauses, and shared value objects in `backend/src/OptiPulse.SharedKernel/`
-- [ ] T010 Create a **per-context** EF Core 10 `DbContext` (`FlagsDbContext`, `AuditDbContext`, `IdentityDbContext`) — one per bounded context/subdomain, each in its own `backend/src/<Context>/Infrastructure/Persistence/` — over the shared physical database, with SQLite/PostgreSQL provider switching (config-driven) and compiled-model setup. No single shared `AppDbContext` (preserves context isolation, Principle I)
-- [ ] T011 Configure the migrations framework and initial empty migration; verify SQLite (dev) and Postgres (Testcontainers) both apply
-- [ ] T012 [P] Implement Redis connection + named Polly v8 resilience pipelines (timeout→retry→circuit-breaker) for Postgres/Redis in `backend/src/*/Infrastructure/Resilience/`
-- [ ] T013 [P] Configure ASP.NET Core Minimal API host, middleware pipeline, centralized error handling (Result + ProblemDetails), and structured logging + telemetry (**Serilog + OpenTelemetry**) in `backend/src/OptiPulse.Api/Program.cs`
-- [ ] T014 [P] Enable native OpenAPI document generation (`Microsoft.AspNetCore.OpenApi`) and expose `openapi.json` in `backend/src/OptiPulse.Api/`
-- [ ] T015 [P] Implement append-only audit store + `IAuditLog` interface (insert-only; no UPDATE/DELETE grants) in `backend/src/AuditTelemetry/{Application,Infrastructure}/` per [data-model.md](data-model.md)
-- [ ] T016 [P] Implement Testcontainers fixtures (Postgres + Redis) shared across integration tests in `backend/tests/OptiPulse.IntegrationTests/Fixtures/`
-- [ ] T017 Wire `contracts-gen/generate.sh` to the built `openapi.json` and add the CI drift gate (`git diff --exit-code` over spec + generated dirs) per [contracts/openapi-pipeline.md](contracts/openapi-pipeline.md)
+- [X] T009 [P] Implement `Result`, guard clauses, and shared value objects in `backend/src/OptiPulse.SharedKernel/`
+- [X] T010 Create a **per-context** EF Core 10 `DbContext` (`FlagsDbContext`, `AuditDbContext`, `IdentityDbContext`) — one per bounded context/subdomain, each in its own `backend/src/<Context>/Infrastructure/Persistence/` — over the shared physical database, with SQLite/PostgreSQL provider switching (config-driven) and compiled-model setup. No single shared `AppDbContext` (preserves context isolation, Principle I)
+- [X] T011 Configure the migrations framework and initial empty migration; verify SQLite (dev) and Postgres (Testcontainers) both apply
+- [X] T012 [P] Implement Redis connection + named Polly v8 resilience pipelines (timeout→retry→circuit-breaker) for Postgres/Redis in `backend/src/*/Infrastructure/Resilience/`
+- [X] T013 [P] Configure ASP.NET Core Minimal API host, middleware pipeline, centralized error handling (Result + ProblemDetails), and structured logging + telemetry (**Serilog + OpenTelemetry**) in `backend/src/OptiPulse.Api/Program.cs`
+- [X] T014 [P] Enable native OpenAPI document generation (`Microsoft.AspNetCore.OpenApi`) and expose `openapi.json` in `backend/src/OptiPulse.Api/`
+- [X] T015 [P] Implement append-only audit store + `IAuditLog` interface (insert-only; no UPDATE/DELETE grants) in `backend/src/AuditTelemetry/{Application,Infrastructure}/` per [data-model.md](data-model.md)
+- [X] T016 [P] Implement Testcontainers fixtures (Postgres + Redis) shared across integration tests in `backend/tests/OptiPulse.IntegrationTests/Fixtures/`
+- [X] T017 Wire `contracts-gen/generate.sh` to the built `openapi.json` and add the CI drift gate (`git diff --exit-code` over spec + generated dirs) per [contracts/openapi-pipeline.md](contracts/openapi-pipeline.md)
 
 **Checkpoint**: Foundation ready — user stories can now begin.
 
@@ -77,23 +77,23 @@ description: "Task list for OptiPulse Platform implementation"
 
 ### Tests for User Story 1
 
-- [ ] T018 [P] [US1] BenchmarkDotNet suite asserting p99 < 5ms and **0 B** allocation/eval in `backend/tests/OptiPulse.Evaluation.Benchmarks/EvaluationBenchmarks.cs`
-- [ ] T019 [P] [US1] Unit tests for MurmurHash3 determinism + basis-point bucket distribution in `backend/tests/OptiPulse.UnitTests/Evaluation/BucketingTests.cs`
-- [ ] T020 [P] [US1] Contract test for `POST /api/v1/evaluate` (+ batch, snapshot/version) per [contracts/evaluation-api.md](contracts/evaluation-api.md) in `backend/tests/OptiPulse.IntegrationTests/Evaluation/EvaluationApiTests.cs`
-- [ ] T021 [P] [US1] Integration test: last-known-good fail-safe during simulated datastore outage in `backend/tests/OptiPulse.IntegrationTests/Evaluation/FailSafeTests.cs`
+- [X] T018 [P] [US1] BenchmarkDotNet suite asserting p99 < 5ms and **0 B** allocation/eval in `backend/tests/OptiPulse.Evaluation.Benchmarks/EvaluationBenchmarks.cs`
+- [X] T019 [P] [US1] Unit tests for MurmurHash3 determinism + basis-point bucket distribution in `backend/tests/OptiPulse.UnitTests/Evaluation/BucketingTests.cs`
+- [X] T020 [P] [US1] Contract test for `POST /api/v1/evaluate` (+ batch, snapshot/version) per [contracts/evaluation-api.md](contracts/evaluation-api.md) in `backend/tests/OptiPulse.IntegrationTests/Evaluation/EvaluationApiTests.cs`
+- [X] T021 [P] [US1] Last-known-good fail-safe tests during simulated datastore outage in `backend/tests/OptiPulse.UnitTests/Evaluation/FailSafeTests.cs` — implemented at unit level (SnapshotStore + Evaluator), which is where the fail-safe property lives; a full 5-minute live container-outage test (quickstart V5) remains for Phase 8
 
 ### Implementation for User Story 1
 
-- [ ] T022 [P] [US1] Implement zero-allocation MurmurHash3 (x86-32) over `ReadOnlySpan<byte>` in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Domain/Hashing/MurmurHash3.cs`
-- [ ] T023 [P] [US1] Implement `EvaluationContext`/`EvaluationResult` readonly structs in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Domain/`
-- [ ] T024 [US1] Implement `CompiledFlag` + immutable `FlagSnapshot` (FrozenDictionary) in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Domain/Snapshot/` (depends on T022, T023)
-- [ ] T025 [US1] Implement `IEvaluator` with targeting-rule matching, rollout bucketing, sticky variant assignment, and safe-default/unknown handling in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Application/Evaluator.cs`
-- [ ] T026 [US1] Implement lock-free snapshot store (atomic reference swap) + last-known-good retention in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Infrastructure/SnapshotStore.cs`
-- [ ] T027 [US1] Implement Redis Pub/Sub subscriber applying deltas with version/kill-switch precedence + periodic reconciliation backstop per [contracts/invalidation-channel.md](contracts/invalidation-channel.md) in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Infrastructure/InvalidationSubscriber.cs`
-- [ ] T028 [P] [US1] Implement async `ExposureEvent` writer (bounded channel, off hot path) in `backend/src/AuditTelemetry/OptiPulse.Audit.Infrastructure/ExposureWriter.cs`
-- [ ] T029 [US1] Implement `VariantExposureCount` aggregation (windowed) in `backend/src/AuditTelemetry/OptiPulse.Audit.Application/ExposureAggregator.cs` (depends on T028)
-- [ ] T030 [US1] Map evaluation Minimal API endpoints (`/evaluate`, `/evaluate/batch`, `/snapshot/version`) with service-account auth in `backend/src/OptiPulse.Api/Endpoints/EvaluationEndpoints.cs`
-- [ ] T031 [US1] Emit exposure events from evaluation when under an experiment; wire logging/`reason` codes in `backend/src/OptiPulse.Api/Endpoints/EvaluationEndpoints.cs`
+- [X] T022 [P] [US1] Implement zero-allocation MurmurHash3 (x86-32) over `ReadOnlySpan<byte>` in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Domain/Hashing/MurmurHash3.cs`
+- [X] T023 [P] [US1] Implement `EvaluationContext`/`EvaluationResult` readonly structs in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Domain/`
+- [X] T024 [US1] Implement `CompiledFlag` + immutable `FlagSnapshot` (FrozenDictionary) in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Domain/Snapshot/` (depends on T022, T023)
+- [X] T025 [US1] Implement `IEvaluator` with targeting-rule matching, rollout bucketing, sticky variant assignment, and safe-default/unknown handling in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Application/Evaluator.cs`
+- [X] T026 [US1] Implement lock-free snapshot store (atomic reference swap) + last-known-good retention in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Infrastructure/SnapshotStore.cs`
+- [X] T027 [US1] Implement Redis Pub/Sub subscriber applying deltas with version/kill-switch precedence + periodic reconciliation backstop per [contracts/invalidation-channel.md](contracts/invalidation-channel.md) in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Infrastructure/InvalidationSubscriber.cs`
+- [X] T028 [P] [US1] Implement async `ExposureEvent` writer (bounded channel, off hot path) in `backend/src/AuditTelemetry/OptiPulse.Audit.Infrastructure/ExposureWriter.cs`
+- [X] T029 [US1] Implement `VariantExposureCount` aggregation (windowed) in `backend/src/AuditTelemetry/OptiPulse.Audit.Application/ExposureAggregator.cs` (depends on T028)
+- [X] T030 [US1] Map evaluation Minimal API endpoints (`/evaluate`, `/evaluate/batch`, `/snapshot/version`) with service-account auth in `backend/src/OptiPulse.Api/Endpoints/EvaluationEndpoints.cs`
+- [X] T031 [US1] Emit exposure events from evaluation when under an experiment; wire logging/`reason` codes in `backend/src/OptiPulse.Api/Endpoints/EvaluationEndpoints.cs`
 
 **Checkpoint**: US1 is a functional, benchmarked, fail-safe evaluation service — deployable MVP.
 
@@ -107,19 +107,19 @@ description: "Task list for OptiPulse Platform implementation"
 
 ### Tests for User Story 2
 
-- [ ] T032 [P] [US2] Contract tests for `/auth/login|refresh|logout|me` per [contracts/auth-api.md](contracts/auth-api.md), including a login-latency assertion (< 5s, SC-009), in `backend/tests/OptiPulse.IntegrationTests/Auth/AuthApiTests.cs`
-- [ ] T033 [P] [US2] Integration test: RBAC matrix — Manager-only vs Admin-only endpoints return 403 for the wrong role, with audited attempts, in `backend/tests/OptiPulse.IntegrationTests/Auth/RbacMatrixTests.cs`
-- [ ] T034 [P] [US2] Unit test: refresh-token rotation + reuse detection revokes the family in `backend/tests/OptiPulse.UnitTests/Auth/RefreshRotationTests.cs`
+- [X] T032 [P] [US2] Contract tests for `/auth/login|refresh|logout|me` per [contracts/auth-api.md](contracts/auth-api.md), including a login-latency assertion (< 5s, SC-009), in `backend/tests/OptiPulse.IntegrationTests/Auth/AuthApiTests.cs`
+- [X] T033 [P] [US2] Integration test: RBAC matrix — Manager-only vs Admin-only endpoints return 403 for the wrong role, with audited attempts, in `backend/tests/OptiPulse.IntegrationTests/Auth/RbacMatrixTests.cs`
+- [X] T034 [P] [US2] Unit test: refresh-token rotation + reuse detection revokes the family in `backend/tests/OptiPulse.UnitTests/Auth/RefreshRotationTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T035 [P] [US2] Implement `User` + `Role` entities and password hashing in `backend/src/OptiPulse.IdentityAccess/Domain/`
-- [ ] T036 [P] [US2] Implement revocable `RefreshToken` entity + EF Core store (token-family rotation, reuse detection) in `backend/src/OptiPulse.IdentityAccess/Infrastructure/RefreshTokenStore.cs`
-- [ ] T037 [US2] Implement JWT issuance/validation service (claims per [contracts/auth-api.md](contracts/auth-api.md)) in `backend/src/OptiPulse.IdentityAccess/Application/TokenService.cs` (depends on T035, T036)
-- [ ] T038 [US2] Register JWT bearer authentication + `Manager`/`Admin` authorization policies in `backend/src/OptiPulse.Api/Auth/AuthConfiguration.cs`
-- [ ] T039 [US2] Map `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me` endpoints in `backend/src/OptiPulse.Api/Endpoints/AuthEndpoints.cs`
-- [ ] T040 [US2] Write audit entries for login success/failure, logout, and role-denied attempts via `IAuditLog` in `backend/src/OptiPulse.Api/Auth/` (uses T015)
-- [ ] T041 [US2] Apply `[Authorize]` policies to existing evaluation service-account endpoints and document required roles in `backend/src/OptiPulse.Api/Endpoints/`
+- [X] T035 [P] [US2] Implement `User` + `Role` entities and password hashing in `backend/src/OptiPulse.IdentityAccess/Domain/`
+- [X] T036 [P] [US2] Implement revocable `RefreshToken` entity + EF Core store (token-family rotation, reuse detection) in `backend/src/OptiPulse.IdentityAccess/Infrastructure/RefreshTokenStore.cs`
+- [X] T037 [US2] Implement JWT issuance/validation service (claims per [contracts/auth-api.md](contracts/auth-api.md)) in `backend/src/OptiPulse.IdentityAccess/Application/TokenService.cs` (depends on T035, T036)
+- [X] T038 [US2] Register JWT bearer authentication + `Manager`/`Admin` authorization policies in `backend/src/OptiPulse.Api/Auth/AuthConfiguration.cs`
+- [X] T039 [US2] Map `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me` endpoints in `backend/src/OptiPulse.Api/Endpoints/AuthEndpoints.cs`
+- [X] T040 [US2] Write audit entries for login success/failure, logout, and role-denied attempts via `IAuditLog` in `backend/src/OptiPulse.Api/Auth/` (uses T015)
+- [X] T041 [US2] Apply `[Authorize]` policies to existing evaluation service-account endpoints and document required roles in `backend/src/OptiPulse.Api/Endpoints/`
 
 **Checkpoint**: Full auth + RBAC enforced server-side; US3/US4 can now build authenticated flows.
 

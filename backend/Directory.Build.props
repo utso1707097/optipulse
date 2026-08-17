@@ -1,0 +1,59 @@
+<Project>
+
+  <!-- Constitution v2.1.0 — Principle III (.NET 10 Modern Standards, NON-NEGOTIABLE) -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Warnings-as-errors (general C# / nullable diagnostics), all projects -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    Native AOT publish (PublishAot) targets OptiPulse.Api — it is the actual
+    publish target and the project that matters for startup/footprint
+    (Principle III). Build-time AOT/trim ANALYZER enforcement (errors on
+    `dotnet build`), however, is scoped only to the true Evaluation Engine
+    hot-path projects below, not to Api itself.
+
+    Why not enforce it on Api too: Api is the composition root, and it
+    legitimately wires EF Core (Flags/Audit/Identity Infrastructure) — EF Core
+    is not fully AOT/trim-compatible as of .NET 10 even in Microsoft's own
+    guidance (research.md R5/R13). Turning the analyzer on for Api would fail
+    every `dotnet build` on EF's own DbContext constructor and on
+    AddDbContext/config-binding calls in Program.cs, none of which are things
+    OptiPulse controls or that affect the evaluation hot path. The actual
+    zero-allocation, AOT-safe guarantee (Principle II) lives in
+    Evaluation.Domain/Application/Infrastructure, which build clean under the
+    analyzer with zero EF/reflection usage — that is the real, verified claim.
+    A full `dotnet publish -p:PublishAot=true` across the whole graph (which
+    would surface Api's genuine EF-related AOT gaps, if any) is a separate,
+    later gate (tasks.md T085, Phase 8 Polish) — not required for this MVP
+    build to pass.
+  -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'OptiPulse.Api'">
+    <PublishAot>true</PublishAot>
+    <!-- The SDK implicitly enables EnableAotAnalyzer/EnableTrimAnalyzer whenever
+         PublishAot=true. Explicitly overriding both to false here (not just
+         omitting them) for the EF-composition-root reason explained above —
+         omission alone is not enough because PublishAot's implied default wins. -->
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>false</EnableAotAnalyzer>
+  </PropertyGroup>
+
+  <!-- Evaluation Engine hot-path projects: build-time AOT/trim analyzer as a
+       hard error, because Principle II's zero-alloc guarantee depends on them
+       staying reflection-free. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('OptiPulse.Evaluation'))">
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+  </PropertyGroup>
+
+</Project>

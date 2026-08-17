@@ -8,8 +8,8 @@ cmd="$(printf '%s' "$payload" | python3 -c 'import json,sys;print(json.load(sys.
 [ -z "$cmd" ] && exit 0
 
 if printf '%s' "$cmd" | grep -Eq \
-  -e 'git[[:space:]]+push([[:space:]].*)?(--force|-f)([[:space:]]|$)' \
-  -e 'git[[:space:]]+push[[:space:]].*\+' \
+  -e 'git[[:space:]]+push([[:space:]][^|;&]*)?[[:space:]](--force|-f)([[:space:]]|$)' \
+  -e 'git[[:space:]]+push[[:space:]][^|;&]*[[:space:]]\+[A-Za-z]' \
   -e 'git[[:space:]]+reset[[:space:]]+--hard' \
   -e 'git[[:space:]]+clean[[:space:]]+-[a-z]*f[a-z]*d' \
   -e 'rm[[:space:]]+-[a-z]*r[a-z]*f[a-z]*[[:space:]]+/([[:space:]]|$)' \
