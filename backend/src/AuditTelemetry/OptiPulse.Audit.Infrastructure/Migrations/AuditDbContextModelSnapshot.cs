@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OptiPulse.Audit.Infrastructure;
 
 #nullable disable
@@ -16,51 +17,55 @@ namespace OptiPulse.Audit.Infrastructure.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
+            modelBuilder
+                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("OptiPulse.Audit.Domain.AuditEntry", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AfterStateJson")
-                        .HasColumnType("TEXT")
+                        .HasColumnType("text")
                         .HasColumnName("AfterState");
 
                     b.Property<string>("BeforeStateJson")
-                        .HasColumnType("TEXT")
+                        .HasColumnType("text")
                         .HasColumnName("BeforeState");
 
                     b.Property<string>("ChangeType")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(30)");
 
                     b.Property<Guid>("TargetId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("Timestamp")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("timestamp with time zone");
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Actor", "OptiPulse.Audit.Domain.AuditEntry.Actor#ActorReference", b1 =>
                         {
                             b1.IsRequired();
 
                             b1.Property<Guid>("ActorId")
-                                .HasColumnType("TEXT")
+                                .HasColumnType("uuid")
                                 .HasColumnName("Actor_Id");
 
                             b1.Property<string>("DisplayName")
                                 .IsRequired()
                                 .HasMaxLength(200)
-                                .HasColumnType("TEXT")
+                                .HasColumnType("character varying(200)")
                                 .HasColumnName("Actor_DisplayName");
 
                             b1.Property<string>("Role")
                                 .IsRequired()
                                 .HasMaxLength(20)
-                                .HasColumnType("TEXT")
+                                .HasColumnType("character varying(20)")
                                 .HasColumnName("Actor_Role");
                         });
 
@@ -77,26 +82,28 @@ namespace OptiPulse.Audit.Infrastructure.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("ContextKey")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("ExperimentId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("FlagKey")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("text");
 
                     b.Property<long>("SnapshotVersion")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset>("Timestamp")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("VariantKey")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
