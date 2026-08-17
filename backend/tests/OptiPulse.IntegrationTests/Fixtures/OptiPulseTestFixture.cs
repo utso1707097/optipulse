@@ -49,11 +49,14 @@ public sealed class OptiPulseTestFixture : WebApplicationFactory<Program>, IAsyn
             configBuilder.AddInMemoryCollection(
             [
                 new("Database:Provider", "Postgres"),
-                // Provider-correct DDL generated from the model — the committed
-                // migration set is SQLite-authored (see BootstrapAsync's KNOWN
-                // LIMITATION note). Still a REAL Postgres container, so the
-                // constitution's "never in-memory" testing rule holds.
-                new("Database:SchemaStrategy", "EnsureCreated"),
+                // "Migrate", not "EnsureCreated" (T093). The suite previously generated
+                // DDL from the model because the committed migrations were SQLite-authored
+                // and could not apply to Postgres — which meant the production schema path
+                // was never exercised, and its breakage (`42804`) stayed invisible while
+                // every test passed. Applying the real migrations against the real Postgres
+                // container makes every CI run a regression test for them, so a future
+                // model change that lacks a migration fails here instead of at deploy.
+                new("Database:SchemaStrategy", "Migrate"),
                 new("ConnectionStrings:Flags", PostgresConnectionString),
                 new("ConnectionStrings:Audit", PostgresConnectionString),
                 new("ConnectionStrings:Identity", PostgresConnectionString),

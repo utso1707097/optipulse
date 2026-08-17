@@ -140,19 +140,12 @@ finally
 
 static void ConfigureProvider(DbContextOptionsBuilder options, string provider, string connectionString)
 {
-    // Migrations are authored against SQLite (the dev-time provider, per the
-    // constitution's SQLite-dev / Postgres-prod split). Npgsql's conventions
-    // compute a slightly different model snapshot for the same C# model (e.g.
-    // provider-specific type mappings), so EF raises PendingModelChangesWarning
-    // when applying those migrations on Postgres even though the schema is
-    // correct. Suppressing this specific warning is EF's documented knob for
-    // multi-provider setups; it does NOT suppress real migration failures, which
-    // still throw. Provider-specific migration sets (a Phase 5+ concern once the
-    // schema stabilises) would remove the need for this — see the KNOWN LIMITATION
-    // note on BootstrapAsync below.
-    options.ConfigureWarnings(warnings =>
-        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-
+    // NOTE: PendingModelChangesWarning is deliberately NOT suppressed any more (T093).
+    // It was suppressed only because the migrations were SQLite-authored, so Npgsql
+    // computed a different model snapshot and every Postgres run raised it. Now that
+    // migrations are authored against Postgres — the single migrated provider — that
+    // warning means what it is supposed to mean: the model drifted from the migrations
+    // and someone owes a new one. Silencing it would hide exactly that.
     if (string.Equals(provider, "Postgres", StringComparison.OrdinalIgnoreCase))
     {
         options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
@@ -167,15 +160,15 @@ static void ConfigureProvider(DbContextOptionsBuilder options, string provider, 
 /// Prepares the database schema and loads the initial flag snapshot (research R2
 /// bootstrap) before the host starts accepting traffic.
 ///
-/// KNOWN LIMITATION (tracked for Phase 5+): the committed migration set is
-/// SQLite-authored, and EF Core migrations are provider-specific — SQLite emits
-/// INTEGER for bool/Guid where PostgreSQL needs boolean/uuid, so replaying those
-/// migrations against Postgres produces a subtly wrong schema. Until a dedicated
-/// Postgres migration set exists, the schema strategy is configurable:
-///   "Migrate"       — apply committed migrations (default; correct for SQLite)
-///   "EnsureCreated" — generate provider-correct DDL from the model at runtime
-/// Integration tests run against real Postgres with "EnsureCreated", which still
-/// satisfies the constitution's "real database, never in-memory" testing rule.
+/// Schema strategy is configurable per environment (constitution v2.2.0 persistence rules):
+///   "Migrate"       — apply the committed PostgreSQL migrations. The production path.
+///   "EnsureCreated" — generate DDL from the model at runtime. SQLite dev/edge only.
+///
+/// PostgreSQL is the single migrated provider: EF emits provider-specific DDL, so one
+/// migration set cannot serve both (SQLite emits INTEGER for bool/Guid where PostgreSQL
+/// needs boolean/uuid — that mismatch is what made `MigrateAsync` fail against Postgres
+/// with `42804` before T093). Rather than maintain two sets for one model, SQLite is
+/// provisioned from the model directly and never migrated.
 /// </summary>
 static async Task BootstrapAsync(WebApplication app)
 {
@@ -187,6 +180,21 @@ static async Task BootstrapAsync(WebApplication app)
     var identityDb = services.GetRequiredService<IdentityDbContext>();
 
     var schemaStrategy = app.Configuration["Database:SchemaStrategy"] ?? "Migrate";
+    var databaseProvider = app.Configuration["Database:Provider"] ?? "Sqlite";
+
+    // Fail fast on the one combination that silently produces a WRONG schema rather than an
+    // error: the committed migrations are PostgreSQL-authored (the single migrated provider),
+    // so replaying them on SQLite emits DDL for the wrong dialect. SQLite is provisioned from
+    // the model instead. Catching this at boot beats discovering it as mis-typed columns later.
+    if (!string.Equals(databaseProvider, "Postgres", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(schemaStrategy, "EnsureCreated", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException(
+            $"Database:Provider='{databaseProvider}' requires Database:SchemaStrategy='EnsureCreated'. " +
+            "Committed EF migrations are authored against PostgreSQL and must not be applied to " +
+            "another provider (constitution v2.2.0: PostgreSQL is the single migrated provider).");
+    }
+
     if (string.Equals(schemaStrategy, "EnsureCreated", StringComparison.OrdinalIgnoreCase))
     {
         await EnsureSchemaAsync(flagsDb);
