@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (.NET 10)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Anti-pattern gate
+        run: bash scripts/check-antipatterns.sh
+
+      - name: Restore
+        run: dotnet restore
+
+      # Constitution Principle III — warnings (incl. AOT/trim) are build errors.
+      - name: Build (warnings as errors)
+        run: dotnet build --no-restore -warnaserror
+
+      - name: Test
+        run: dotnet test --no-build --verbosity normal
+
+      # Constitution Principle II — zero-allocation, sub-5ms evaluation gate.
+      - name: Evaluation benchmark gate
+        run: dotnet run -c Release --project tests/OptiPulse.Evaluation.Benchmarks --no-launch-profile -- --filter '*' --exporters json
+        continue-on-error: false
+
+  contracts-drift:
+    name: OpenAPI contract drift gate
+    runs-on: ubuntu-latest
+    needs: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Regenerate OpenAPI + clients
+        run: bash contracts-gen/generate.sh
+
+      # Constitution Principle VII — any diff here means an endpoint changed
+      # without regenerating the spec + both client artifacts.
+      - name: Fail on drift
+        run: git diff --exit-code -- contracts-gen/ web/optipulse_dashboard/src/api/ mobile/optipulse_app/lib/core/generated/
+
+  web:
+    name: Web Dashboard (React)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web/optipulse_dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/optipulse_dashboard/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  mobile:
+    name: Mobile App (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/optipulse_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      # The Flutter app is still a scaffold until Phase 6 (US4, T063-T077), so
+      # `flutter test` fails with "does not appear to contain any test files".
+      # Skip ONLY while there is no Dart source at all — the moment any lands,
+      # missing tests become a hard failure rather than a silent pass.
+      - name: Test
+        run: |
+          if find lib -name '*.dart' -print -quit | grep -q .; then
+            if find test -name '*_test.dart' -print -quit | grep -q .; then
+              flutter test
+            else
+              echo "::error::lib/ contains Dart source but test/ has no *_test.dart files."
+              exit 1
+            fi
+          else
+            echo "::notice::Skipping flutter test - lib/ has no Dart source yet (scaffold; see T063-T077)."
+          fi

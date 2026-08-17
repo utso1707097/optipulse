@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- PublishAot is deliberately NOT set here. It bakes
+         RuntimeFeature.IsDynamicCodeSupported=false into the runtimeconfig for
+         every build, which makes EF Core refuse to build a model at all and
+         prevents this host from starting. See the long note in
+         ../../Directory.Build.props for the prerequisites (compiled models +
+         moving MigrateAsync off the startup path) tracked as T085. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Asp.Versioning.Http" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EvaluationEngine\OptiPulse.Evaluation.Application\OptiPulse.Evaluation.Application.csproj" />
+    <ProjectReference Include="..\EvaluationEngine\OptiPulse.Evaluation.Infrastructure\OptiPulse.Evaluation.Infrastructure.csproj" />
+    <ProjectReference Include="..\AuditTelemetry\OptiPulse.Audit.Application\OptiPulse.Audit.Application.csproj" />
+    <ProjectReference Include="..\AuditTelemetry\OptiPulse.Audit.Infrastructure\OptiPulse.Audit.Infrastructure.csproj" />
+    <ProjectReference Include="..\OptiPulse.SharedKernel\OptiPulse.SharedKernel.csproj" />
+    <ProjectReference Include="..\FlagManagement\OptiPulse.Flags.Application\OptiPulse.Flags.Application.csproj" />
+    <ProjectReference Include="..\FlagManagement\OptiPulse.Flags.Infrastructure\OptiPulse.Flags.Infrastructure.csproj" />
+    <ProjectReference Include="..\FlagManagement\OptiPulse.Flags.Domain\OptiPulse.Flags.Domain.csproj" />
+    <ProjectReference Include="..\OptiPulse.IdentityAccess\OptiPulse.IdentityAccess.csproj" />
+  </ItemGroup>
+  
+</Project>
