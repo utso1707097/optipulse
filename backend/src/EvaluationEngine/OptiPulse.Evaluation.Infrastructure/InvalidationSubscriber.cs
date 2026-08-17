@@ -21,17 +21,45 @@ public sealed class InvalidationSubscriber(
     RedisOptions redisOptions,
     ILogger<InvalidationSubscriber> logger) : BackgroundService
 {
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var subscriber = redis.GetSubscriber();
         var channel = RedisChannel.Literal(redisOptions.InvalidationChannel);
 
-        await subscriber.SubscribeAsync(channel, async (_, message) =>
+        // Principle IV (fail-safe): Redis may be unreachable at startup. Since the
+        // multiplexer is created with AbortOnConnectFail=false, SubscribeAsync
+        // throws rather than blocking — and an unhandled exception out of
+        // ExecuteAsync stops the entire host by default
+        // (BackgroundServiceExceptionBehavior.StopHost). Retry instead, so the API
+        // keeps serving last-known-good evaluations and picks invalidation back up
+        // when Redis returns. Once subscribed, StackExchange.Redis restores the
+        // subscription itself across later reconnects, so this loop exits.
+        while (!stoppingToken.IsCancellationRequested)
         {
-            await HandleMessageAsync(message, stoppingToken);
-        });
+            try
+            {
+                await redis.GetSubscriber().SubscribeAsync(channel, async (_, message) =>
+                {
+                    await HandleMessageAsync(message, stoppingToken);
+                });
 
-        logger.LogInformation("Subscribed to invalidation channel {Channel}", redisOptions.InvalidationChannel);
+                logger.LogInformation(
+                    "Subscribed to invalidation channel {Channel}", redisOptions.InvalidationChannel);
+                break;
+            }
+            catch (RedisException ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Could not subscribe to invalidation channel {Channel}; serving last-known-good "
+                        + "and retrying in {RetrySeconds}s",
+                    redisOptions.InvalidationChannel,
+                    RetryDelay.TotalSeconds);
+
+                await Task.Delay(RetryDelay, stoppingToken);
+            }
+        }
 
         // Keep the background service alive until shutdown; the subscription
         // callback above does the actual work as messages arrive.

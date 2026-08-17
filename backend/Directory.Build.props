@@ -34,19 +34,35 @@
     Evaluation.Domain/Application/Infrastructure, which build clean under the
     analyzer with zero EF/reflection usage — that is the real, verified claim.
     A full `dotnet publish -p:PublishAot=true` across the whole graph (which
-    would surface Api's genuine EF-related AOT gaps, if any) is a separate,
-    later gate (tasks.md T085, Phase 8 Polish) — not required for this MVP
-    build to pass.
+    would surface Api's genuine EF-related AOT gaps) is a separate, later gate
+    (tasks.md T085, Phase 8 Polish) — not required for this MVP build to pass.
+
+    DO NOT re-add `<PublishAot>true</PublishAot>` as a standing property here.
+    It is not publish-only: the SDK bakes AOT feature switches into
+    OptiPulse.Api.runtimeconfig.json for EVERY build, including Debug. One of
+    them is `RuntimeFeature.IsDynamicCodeSupported=false`, which EF Core reads
+    to refuse runtime model building entirely:
+
+        System.InvalidOperationException: Model building is not supported when
+        publishing with NativeAOT. Use a compiled model.
+
+    That killed `dotnet run` at BootstrapAsync's MigrateAsync — so the host
+    could not start at all, which broke the contracts-gen OpenAPI export (the
+    CI drift gate boots the real host to dump the spec). The integration tests
+    did NOT catch it because they run under the TEST project's runtimeconfig,
+    which has no such switch; only Api's own runtimeconfig was affected.
+
+    Turning this on for real requires BOTH of the following first, as T085:
+      1. Compiled models (`dotnet ef dbcontext optimize`) for the Flags, Audit,
+         and Identity contexts, regenerated whenever the model changes; and
+      2. Removing runtime schema work from the startup path — `MigrateAsync`
+         needs model building and is not AOT-supported at all, so migrations
+         must move to a separate non-AOT tool/job rather than app boot.
+    Until both are done, AOT for the host is aspirational, and asserting it via
+    this property only breaks the app. Principle III's AOT guarantee is
+    meanwhile genuinely enforced where it is verifiable — the Evaluation Engine
+    hot path below, which builds clean under the analyzers.
   -->
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'OptiPulse.Api'">
-    <PublishAot>true</PublishAot>
-    <!-- The SDK implicitly enables EnableAotAnalyzer/EnableTrimAnalyzer whenever
-         PublishAot=true. Explicitly overriding both to false here (not just
-         omitting them) for the EF-composition-root reason explained above —
-         omission alone is not enough because PublishAot's implied default wins. -->
-    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
-    <EnableAotAnalyzer>false</EnableAotAnalyzer>
-  </PropertyGroup>
 
   <!-- Evaluation Engine hot-path projects: build-time AOT/trim analyzer as a
        hard error, because Principle II's zero-alloc guarantee depends on them

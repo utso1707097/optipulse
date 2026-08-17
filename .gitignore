@@ -25,6 +25,10 @@ Thumbs.db
 [Oo]bj/
 *.dev.db
 *.dev.db-*
+# Local SQLite databases created by the API host / contracts-gen at runtime
+# (connection strings in appsettings.json), plus their WAL/SHM sidecars.
+optipulse-*.db
+optipulse-*.db-*
 [Dd]ebug/
 [Rr]elease/
 *.user

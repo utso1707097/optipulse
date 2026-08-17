@@ -30,7 +30,20 @@ public static class RedisConnectionExtensions
         services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
             var options = sp.GetRequiredService<RedisOptions>();
-            return ConnectionMultiplexer.Connect(options.ConnectionString);
+
+            var configuration = ConfigurationOptions.Parse(options.ConnectionString);
+
+            // Principle IV (fail-safe): an unreachable Redis must NOT stop the API
+            // from starting. Redis carries invalidation messages, not the flag data
+            // itself — the snapshot serves last-known-good without it, which is
+            // exactly the degraded mode the kill-switch design assumes. With the
+            // default AbortOnConnectFail=true, Connect() throws and the whole host
+            // dies at DI resolution, turning a recoverable dependency outage into
+            // total unavailability. False instead lets the multiplexer reconnect in
+            // the background; InvalidationSubscriber resubscribes on recovery.
+            configuration.AbortOnConnectFail = false;
+
+            return ConnectionMultiplexer.Connect(configuration);
         });
 
         return services;

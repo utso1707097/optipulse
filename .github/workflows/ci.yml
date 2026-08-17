@@ -112,5 +112,19 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      # The Flutter app is still a scaffold until Phase 6 (US4, T063-T077), so
+      # `flutter test` fails with "does not appear to contain any test files".
+      # Skip ONLY while there is no Dart source at all — the moment any lands,
+      # missing tests become a hard failure rather than a silent pass.
       - name: Test
-        run: flutter test
+        run: |
+          if find lib -name '*.dart' -print -quit | grep -q .; then
+            if find test -name '*_test.dart' -print -quit | grep -q .; then
+              flutter test
+            else
+              echo "::error::lib/ contains Dart source but test/ has no *_test.dart files."
+              exit 1
+            fi
+          else
+            echo "::notice::Skipping flutter test - lib/ has no Dart source yet (scaffold; see T063-T077)."
+          fi

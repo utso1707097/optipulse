@@ -232,7 +232,7 @@ description: "Task list for OptiPulse Platform implementation"
 **Purpose**: Hardening and final validation across all stories.
 
 - [ ] T084 [P] Run the OpenAPI drift gate end-to-end and commit regenerated TS + Dart clients; confirm CI fails on an intentional drift in `contracts-gen/`
-- [ ] T085 [P] Verify Native AOT publish of `backend/src/OptiPulse.Api` succeeds with zero trim/AOT warnings
+- [ ] T085 [P] Verify Native AOT publish of `backend/src/OptiPulse.Api` succeeds with zero trim/AOT warnings. **Blocked on two prerequisites discovered in Phase 4** (see the note in `backend/Directory.Build.props`): (a) generate compiled models via `dotnet ef dbcontext optimize` for the Flags, Audit and Identity contexts, because AOT sets `RuntimeFeature.IsDynamicCodeSupported=false` and EF Core then refuses runtime model building outright; and (b) move `MigrateAsync` off the startup path — migrations are `RequiresDynamicCode` (IL3050) and are not AOT-supported at all, so schema work must run as a separate non-AOT tool/job. `PublishAot` must stay unset until both are done: it is not publish-only, it changes the runtimeconfig of every build and prevents the host from starting
 - [ ] T086 [P] Confirm benchmark gate is enforced in CI (fails on >5ms or >0 B) per [quickstart.md](quickstart.md) V2
 - [ ] T087 [P] Security hardening pass: verify no signing secrets in clients, refresh tokens revocable, all protected endpoints carry policies
 - [ ] T088 [P] Documentation: update `README.md` and per-client run guides

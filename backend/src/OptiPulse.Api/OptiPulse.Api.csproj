@@ -5,7 +5,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <PublishAot>true</PublishAot>
+    <!-- PublishAot is deliberately NOT set here. It bakes
+         RuntimeFeature.IsDynamicCodeSupported=false into the runtimeconfig for
+         every build, which makes EF Core refuse to build a model at all and
+         prevents this host from starting. See the long note in
+         ../../Directory.Build.props for the prerequisites (compiled models +
+         moving MigrateAsync off the startup path) tracked as T085. -->
   </PropertyGroup>
 
   <ItemGroup>
