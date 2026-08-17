@@ -1,6 +1,59 @@
 <!--
 Sync Impact Report
 ==================
+Version change: 2.1.0 → 2.2.0
+Rationale: MINOR bump. Four principles were materially clarified or expanded after a
+grill-with-docs review of the code built in Phases 1–4 (47/96 tasks) found governance text
+that the codebase either contradicted or could not satisfy. No principle was removed, and no
+performance or security guarantee was weakened. Every amendment below was verified against
+the codebase rather than inferred.
+
+Modified principles:
+- III. .NET 10 Modern Standards — Native AOT requirement SCOPED to hot-path assemblies; the
+  API host's AOT publish becomes an explicitly gated goal. Reason: setting PublishAot bakes
+  RuntimeFeature.IsDynamicCodeSupported=false into every build's runtimeconfig, which makes
+  EF Core refuse runtime model building and prevented the API host from starting at all; EF
+  migrations are RequiresDynamicCode (IL3050) and are not AOT-supported in any form.
+- IV. Resilience & Fail-Safe Kill-Switch Operations — resolved a direct CONTRADICTION with
+  Principle II. "Every outbound dependency MUST be wrapped in Polly" collided with the
+  hot-path indirection ban; in practice two resilience pipelines were registered and never
+  consumed. Polly scope is now stated positively, the hot path is explicitly exempt (it
+  satisfies resilience structurally instead), and an unused pipeline is now a violation.
+- VI. Backend-Contained Authentication & Authorization — ADDED service accounts / SDK
+  credentials as a credential type distinct from human users. Reason: the Identity subdomain
+  models humans only, so the runtime evaluation endpoints could not be bound to a
+  Manager/Admin role and remain anonymous; that state must be documented, not misdescribed.
+- VII. Contract-First API Security — the drift gate must FAIL rather than silently skip a
+  missing client generator, generator versions must be pinned, and the committed spec must
+  not embed environment-specific server URLs. Reason: Dart generation silently skips whenever
+  openapi-generator is absent (always, in CI), so the gate passed by diffing an empty
+  directory and Flutter could drift from the server freely.
+
+Added/updated sections:
+- Technology Stack & Performance Standards: PostgreSQL declared the single migrated provider
+  (SQLite is dev/edge via EnsureCreated); AOT compatibility restated at its verifiable scope.
+- Development Workflow & Quality Gates: added a time-source gate; gates must enforce every
+  pattern the constitution names; contract gate must fail-not-skip.
+- Adopted Toolchain & Practice Baselines: corrected the xUnit pin from v3 to v2 (matches the
+  repo; a v3 migration is churn with no benefit), restated Asp.Versioning as adopt-now, added
+  the DateTimeOffset ban and the resilience-pipeline-consumer rule.
+
+Removed sections: (none)
+
+Downstream follow-up REQUIRED (not performed here):
+- tasks.md contains four completions that the artifacts contradict and which must be
+  corrected: T003a (claims Asp.Versioning + xUnit v3 pinned — neither is present; xunit is
+  2.9.3), T012 (Polly pipelines registered with zero consumers), T030 and T041 (both claim
+  "service-account auth" on evaluation endpoints, which is anonymous and has no
+  service-account concept anywhere in the codebase).
+- Gap-closing tasks must be appended for: Asp.Versioning adoption, drift-gate determinism,
+  TimeProvider at the 5 DateTimeOffset.UtcNow sites, Polly wiring on management paths,
+  service-account credentials, Postgres-authored migrations, and Dart client generation in CI.
+-->
+
+<!--
+Sync Impact Report
+==================
 Version change: 1.0.0 → 2.0.0
 Rationale: MAJOR bump. Principle V was materially REDEFINED from a single-client
 "Cross-Platform Client Consistency" model into a differentiated Dual-Client Strategy
@@ -78,32 +131,71 @@ avoid LINQ, boxing, closures, and per-call string formatting in evaluation code.
 path change MUST be validated with a benchmark (e.g., BenchmarkDotNet) proving zero
 steady-state allocations and the sub-5ms budget before merge.
 
+The evaluation hot path MUST NOT be routed through mediators, cache-aside layers, resilience
+pipelines, or any other per-call indirection. Where this appears to conflict with Principle
+IV's resilience mandate, Principle IV's stated hot-path exemption governs: the hot path earns
+resilience structurally (in-memory snapshot reads that never block on an external dependency),
+not by wrapping calls it does not make.
+
 Rationale: OptiPulse is a real-time feature-flag platform; deterministic, allocation-free
 evaluation is the product's defining guarantee and directly bounds tail latency and GC pauses.
 
 ### III. .NET 10 Modern Standards (NON-NEGOTIABLE)
 
-All backend projects MUST target .NET 10 and MUST remain Native AOT compatible. Code MUST
-use modern C# language features (nullable reference types enabled, records, pattern matching,
-primary constructors, collection expressions) and MUST avoid patterns incompatible with AOT
-(unbounded reflection, runtime code generation, dynamic). Trimming and AOT warnings MUST be
-treated as build errors, not suppressed silently.
+All backend projects MUST target .NET 10. Code MUST use modern C# language features (nullable
+reference types enabled, records, pattern matching, primary constructors, collection
+expressions) and MUST avoid patterns incompatible with AOT (unbounded reflection, runtime code
+generation, `dynamic`). Trimming and AOT warnings MUST be treated as build errors, not
+suppressed silently.
+
+Native AOT compatibility is required at the scope where it is verifiable and beneficial:
+
+- **Hot-path assemblies** (`OptiPulse.Evaluation.*`) MUST build clean with the AOT and trim
+  analyzers enabled and warnings as errors. This is the enforceable guarantee, and it MUST NOT
+  regress.
+- **The API host's Native AOT publish** is a Phase 8 goal, not a standing build property. It is
+  gated on two prerequisites: (a) EF Core compiled models (`dotnet ef dbcontext optimize`) for
+  every DbContext, and (b) moving schema migration off the application startup path.
+- `PublishAot` MUST NOT be set as a standing project property until both prerequisites hold.
+  It is not publish-only: the SDK bakes AOT feature switches — including
+  `RuntimeFeature.IsDynamicCodeSupported=false` — into the runtimeconfig of *every* build,
+  which makes EF Core refuse to build a model at all and prevents the host from starting.
+  Asserting AOT via this property before it is genuinely achievable breaks the application
+  rather than proving anything.
 
 Rationale: Native AOT compatibility delivers fast startup, low memory, and predictable
-performance for the evaluation edge, and a single enforced language baseline prevents
-fragmentation across services.
+performance for the evaluation edge. Claiming it where EF Core makes it impossible produced a
+host that could not boot; scoping the claim to the assemblies that can actually honour it keeps
+the guarantee real and enforced instead of aspirational.
 
 ### IV. Resilience & Fail-Safe Kill-Switch Operations
 
-Every outbound dependency (database, Redis, downstream services) MUST be wrapped in a Polly
-resilience policy (circuit breaker plus timeout/retry as appropriate). Global cache
-invalidation for emergency kill-switches MUST propagate in under 100ms via Redis Pub/Sub.
-When a dependency is degraded or unavailable, evaluation MUST fail safe to the last known
-good in-memory state rather than error; kill-switch semantics MUST always be honored even
+Outbound dependency calls MUST be governed by an explicit resilience policy, scoped as follows:
+
+- **Polly-wrapped paths (REQUIRED)**: management and CRUD persistence, invalidation publishing,
+  outbound provider calls (e.g. the LLM gateway, push delivery), and any other request-scoped
+  I/O. Each MUST carry a circuit breaker plus timeout/retry as appropriate.
+- **Hot-path exemption (REQUIRED, not optional)**: the flag-evaluation path MUST NOT be wrapped
+  in a resilience pipeline, because per-call indirection violates Principle II. It satisfies
+  resilience structurally instead: it reads only in-memory snapshot state, MUST NOT block on
+  Redis or the database, and MUST fail safe to the last known good snapshot.
+- **No decorative pipelines**: a registered resilience pipeline MUST have at least one consumer.
+  A pipeline that is registered and never used is a governance violation, not compliance, and
+  MUST be either wired to a call site or removed.
+- **Startup MUST NOT depend on a degradable dependency**: an unreachable Redis MUST NOT prevent
+  the API from starting or serving evaluations; invalidation transport is recoverable, and
+  refusing to boot converts a partial outage into total unavailability.
+
+Global cache invalidation for emergency kill-switches MUST propagate in under 100ms via Redis
+Pub/Sub. When a dependency is degraded or unavailable, evaluation MUST fail safe to the last
+known good in-memory state rather than error; kill-switch semantics MUST always be honored even
 under partial outage.
 
 Rationale: A feature-flag service is on the critical path of every consumer; it must degrade
-gracefully and must never prevent an operator from disabling a bad feature instantly.
+gracefully and must never prevent an operator from disabling a bad feature instantly. The
+previous blanket "every dependency MUST be wrapped" wording contradicted Principle II, and the
+contradiction resolved itself the worst way in practice — pipelines were registered to satisfy
+the letter of the rule and wired to nothing, leaving the real dependencies unprotected.
 
 ### V. Dual-Client Strategy
 
@@ -139,10 +231,26 @@ every protected operation. Clients (React and Flutter) MUST treat tokens as opaq
 implement auth/authorization decision logic, and MUST NOT embed signing secrets. No third-party
 external identity provider is required or assumed for the core scheme.
 
+OptiPulse recognizes two distinct kinds of caller, and they MUST NOT be conflated:
+
+- **Human users** hold a role (`Manager` or `Admin`) and authenticate with credentials that
+  belong to a person. Management, kill-switch, and AI-approval operations are authorized by role.
+- **Service accounts / SDK credentials** are machine callers on the runtime evaluation surface.
+  They hold no human role, and MUST NOT be authorized by one. They MUST authenticate with their
+  own credential type, scoped to evaluation and telemetry ingest only, and MUST be independently
+  revocable.
+
+Any endpoint that is intentionally left unauthenticated pending service-account support MUST be
+documented as unauthenticated — in code and in the task ledger. Describing an anonymous endpoint
+as authenticated is a governance violation in its own right, because it silently retires a
+control that was never built.
+
 Rationale: Centralizing auth in the backend removes a class of client-side security mistakes,
 keeps a single enforcement point for RBAC, and ensures every management, kill-switch, and AI
-approval action (already audited under Principle IV and the workflow gates) is authorized
-consistently regardless of which client initiated it.
+approval action is authorized consistently regardless of which client initiated it. Separating
+service accounts from human roles prevents the two failure modes that follow from conflating
+them: granting an SDK key human privileges, or leaving the SDK surface open because no human
+role fits it.
 
 ### VII. Contract-First API Security
 
@@ -153,16 +261,40 @@ the build on contract drift — any endpoint, schema, or field change that is no
 the published OpenAPI spec and the client contract artifacts. Breaking contract changes MUST be
 versioned explicitly.
 
+The drift gate MUST be a real signal, which requires all three of:
+
+- **Fail, never skip**: if a generator is unavailable for a client that HAS source in the
+  repository, the gate MUST fail. Silently skipping generation makes the gate pass by comparing
+  an unchanged directory, which reports enforcement while providing none. A client that does not
+  yet exist (no source files) is exempt, and the exemption MUST be tied to the absence of that
+  source — never to a date or a manual flag — so enforcement becomes mandatory automatically the
+  moment the client acquires its first source file. While exempt, its lack of coverage MUST be
+  stated explicitly wherever the gate reports success.
+- **Pinned generators**: every generator version MUST be pinned. An unpinned generator makes the
+  gate non-deterministic, so an upstream release surfaces as phantom contract drift on an
+  unrelated change.
+- **Environment-independent spec**: the committed specification MUST NOT embed
+  environment-specific values (host, port, or `servers` URLs from the generating machine), which
+  would otherwise produce drift that reflects where the generator ran rather than what changed.
+
 Rationale: With two independent clients consuming the same API, contract drift is the most
 likely source of silent runtime breakage. A native, generated OpenAPI spec enforced in CI makes
 the backend the single source of truth and prevents React and Flutter from diverging from the
-server or from each other.
+server or from each other — but only if the gate actually runs both generators deterministically.
 
 ## Technology Stack & Performance Standards
 
 - Backend: .NET 10 Web API, Clean Architecture, EF Core 10 with SQLite (dev/edge) and
   PostgreSQL (production), Redis Pub/Sub for cache invalidation, Polly for resilience, custom
   JWT/RBAC auth, native OpenAPI generation.
+- Persistence and schema provisioning:
+  - **PostgreSQL is the single migrated provider.** EF Core migrations MUST be authored against
+    PostgreSQL, because provider-specific DDL does not transfer — SQLite-authored migrations fail
+    against PostgreSQL (e.g. error `42804`, a boolean expression assigned to an integer column).
+  - **SQLite is a dev/edge convenience**, provisioned via `EnsureCreated`/schema creation rather
+    than migrations. Maintaining dual migration sets for one model is explicitly NOT the approach.
+  - Schema provisioning strategy MUST be configurable per environment, and the production path
+    MUST NOT depend on a startup-time migration once Principle III's AOT goal is pursued.
 - Web Dashboard: React with simplified hooks and lightweight state; always-online; typed API
   client generated from / validated against the backend OpenAPI spec.
 - Mobile App: Flutter with Clean Architecture, BLoC/Cubit, HydratedBloc, Dio; offline-first;
@@ -170,10 +302,12 @@ server or from each other.
 - Performance budgets (hard requirements, verified by benchmark/telemetry):
   - In-memory flag evaluation: < 5ms, zero steady-state allocations, MurmurHash3 bucketing.
   - Global kill-switch cache invalidation: < 100ms end-to-end via Redis Pub/Sub.
-- Compatibility: all backend assemblies Native AOT + trim compatible; nullable enabled;
-  AOT/trim analyzer warnings fail the build.
-- Security: all protected endpoints require a valid backend-issued JWT; RBAC enforced
-  server-side; signing secrets never leave the backend.
+- Compatibility: hot-path assemblies (`OptiPulse.Evaluation.*`) MUST be Native AOT + trim
+  analyzer clean with warnings as errors (Principle III); nullable enabled everywhere. Whole-host
+  AOT publish is a gated Phase 8 goal, not a standing property.
+- Security: all protected endpoints require a valid backend-issued credential — a JWT for human
+  users, a service-account credential for machine callers; RBAC enforced server-side; signing
+  secrets never leave the backend and are never committed.
 
 ## Development Workflow & Quality Gates
 
@@ -183,13 +317,26 @@ server or from each other.
 - Performance: any change touching evaluation, hashing, caching, or invalidation MUST include a
   benchmark demonstrating the relevant budget (< 5ms / < 100ms / zero-alloc).
 - Resilience: new external dependencies MUST ship with a Polly policy and a documented fail-safe
-  behavior.
-- Authentication: protected endpoints MUST enforce JWT validation and RBAC server-side; PRs
-  adding endpoints MUST declare required roles. No auth logic may be added to clients.
+  behavior, and the policy MUST be wired to a call site (Principle IV's no-decorative-pipelines
+  rule). Hot-path code is exempt by design, not by omission.
+- Authentication: protected endpoints MUST enforce credential validation and RBAC server-side;
+  PRs adding endpoints MUST declare the required role or service-account scope. Endpoints
+  intentionally left anonymous MUST say so explicitly. No auth logic may be added to clients.
 - Contracts: the native OpenAPI spec MUST be regenerated and the client contract artifacts
-  updated in the same change; CI MUST fail on contract drift between backend, React, and Flutter.
+  updated in the same change; CI MUST fail on contract drift between backend, React, and Flutter,
+  and MUST fail rather than skip when a generator is missing.
+- Time source: production code MUST NOT call `DateTime.Now`, `DateTime.UtcNow`,
+  `DateTimeOffset.Now`, or `DateTimeOffset.UtcNow`. Inject `TimeProvider` instead, so timestamps
+  are controllable in tests. Startup composition (the point where `TimeProvider.System` is
+  registered) is the only exception.
+- Gates enforce what this document says: an automated gate MUST actually detect every pattern the
+  constitution names. A gate that names a rule it does not check is worse than no gate, because it
+  reports compliance that was never verified. Adding a banned pattern to this document REQUIRES
+  extending the corresponding gate in the same change.
 - Testing: Domain and Application logic MUST have unit tests; cross-layer and inter-service
   contracts MUST have integration tests.
+- Task ledger integrity: a task MUST NOT be marked complete unless the artifact it claims exists.
+  A completed checkbox is a factual assertion that later planning depends on.
 - Reviews: every PR MUST verify compliance with Principles I–VII; deviations MUST be justified
   in writing and approved, or the PR is rejected.
 
@@ -202,19 +349,23 @@ baseline requirements derived from them:
 - **Dev hooks (required)**: format-on-write, a secret-blocking pre-write guard, and a
   destructive-command (force-push / `reset --hard` / `rm -rf`) guard MUST be active
   (`.claude/settings.json` + `.claude/hooks/`).
-- **Anti-pattern gate (backend)**: code MUST NOT use `DateTime.Now`/`DateTime.UtcNow` directly
-  (use `TimeProvider`), `async void`, or `new HttpClient()` (use `IHttpClientFactory`). The
-  Result pattern is used for expected failures; broad `catch` is disallowed (reinforces Principle
-  IV error handling).
+- **Anti-pattern gate (backend)**: code MUST NOT use `DateTime.Now`/`DateTime.UtcNow` or
+  `DateTimeOffset.Now`/`DateTimeOffset.UtcNow` directly (use `TimeProvider`), `async void`, or
+  `new HttpClient()` (use `IHttpClientFactory`). The Result pattern is used for expected failures;
+  broad `catch` is disallowed (reinforces Principle IV error handling).
 - **Package/tooling baseline (backend)**: Polly via `Microsoft.Extensions.Http.Resilience`,
-  xUnit v3 + Testcontainers (no in-memory DB) for integration-first tests, Serilog +
+  xUnit v2 + Testcontainers (no in-memory DB) for integration-first tests, Serilog +
   OpenTelemetry, `Asp.Versioning`, `TimeProvider`; native OpenAPI (no Swashbuckle); versions via
   `Directory.Packages.props` (never hardcoded). The Roslyn navigator MCP is available for
   code navigation/analysis.
+  - `Asp.Versioning` MUST be adopted for API versioning rather than hand-written `/api/v1`
+    route prefixes, and MUST be introduced while the endpoint surface is small — retrofitting
+    versioning across a large surface is materially more expensive.
 - **Architecture pin**: backend MUST use Clean Architecture (the kits' VSA/DDD/modular options
   are not used); auth MUST be custom JWT/RBAC (not ASP.NET Identity/external OIDC).
 - **Hot-path exclusion**: the flag-evaluation hot path MUST NOT route through mediator, cache-aside,
-  or other indirection layers (protects Principle II); such patterns are for management/CRUD paths only.
+  resilience pipelines, or other indirection layers (protects Principle II); such patterns are for
+  management/CRUD paths only.
 - **Client pins**: Flutter state = BLoC/Cubit + HydratedBloc only (no Riverpod/Provider/ChangeNotifier
   for app state); React state = custom hooks + a single AuthContext only (no Redux/MobX/Zustand/React
   Query); Flutter networking = Dio; both clients' API models MUST be OpenAPI-generated.
@@ -234,4 +385,9 @@ principles and performance budgets. Complexity or deviation MUST be explicitly j
 Runtime development guidance and agent-specific instructions live in their respective guidance
 files and MUST remain consistent with this constitution.
 
-**Version**: 2.1.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-17
+When this document and the codebase disagree, that disagreement MUST be resolved explicitly in
+one direction — by fixing the code, or by amending this document with rationale — and never by
+leaving the contradiction in place. A principle the code silently violates provides no
+governance while still implying that it does.
+
+**Version**: 2.2.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-17

@@ -25,6 +25,9 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
     <!-- Native OpenAPI (Principle VII — no Swashbuckle) -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
+    <!-- API versioning (constitution package baseline). Adopted while the surface is
+         still 7 endpoints — retrofitting across Phase 5/6's additions costs materially more. -->
+    <PackageVersion Include="Asp.Versioning.Http" Version="10.2.2" />
     <!-- Custom JWT auth + RBAC (Principle VI — backend-contained, no external IdP) -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />

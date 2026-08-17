@@ -76,6 +76,7 @@ try
 
     // Custom JWT authentication + RBAC policies (Principle VI).
     builder.Services.AddOptiPulseAuth(builder.Configuration, builder.Environment.IsDevelopment());
+    builder.Services.AddOptiPulseVersioning();
 
     builder.Services.AddScoped<IFlagConfigurationReader, FlagConfigurationReader>();
     builder.Services.AddScoped<IAuditLog, AuditLog>();
@@ -117,8 +118,11 @@ try
         app.MapOpenApi();
     }
 
-    app.MapAuthEndpoints();
-    app.MapEvaluationEndpoints();
+    // One shared version set for every group, so introducing v2 later is a change in
+    // ApiVersioning rather than a sweep of hardcoded route strings (Principle VII).
+    var versionSet = app.CreateVersionSet();
+    app.MapAuthEndpoints(versionSet);
+    app.MapEvaluationEndpoints(versionSet);
 
     await BootstrapAsync(app);
 
@@ -198,11 +202,12 @@ static async Task BootstrapAsync(WebApplication app)
 
     var provider = services.GetRequiredService<IFlagConfigurationProvider>();
     var snapshotWriter = services.GetRequiredService<ISnapshotWriter>();
+    var timeProvider = services.GetRequiredService<TimeProvider>();
 
     var flags = await provider.GetAllCompiledFlagsAsync();
     var snapshot = new OptiPulse.Evaluation.Domain.FlagSnapshot(
         version: flags.Count == 0 ? 0 : flags.Max(f => f.Version),
-        builtAt: DateTimeOffset.UtcNow,
+        builtAt: timeProvider.GetUtcNow(),
         flags: flags);
 
     snapshotWriter.LoadInitial(snapshot);

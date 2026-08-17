@@ -11,9 +11,12 @@ namespace OptiPulse.Api.Endpoints;
 
 public static class AuthEndpoints
 {
-    public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapAuthEndpoints(
+        this IEndpointRouteBuilder app, Asp.Versioning.Builder.ApiVersionSet versionSet)
     {
-        var group = app.MapGroup("/api/v1/auth");
+        var group = app.MapGroup($"{ApiVersioning.RoutePrefix}/auth")
+            .WithApiVersionSet(versionSet)
+            .MapToApiVersion(ApiVersioning.V1);
 
         group.MapPost("/login", async (
             LoginRequest request,

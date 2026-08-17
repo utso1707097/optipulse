@@ -52,8 +52,10 @@ in-process immutable snapshot for evaluation; refresh-token store (EF Core, revo
 gate; Flutter `flutter_test` + `bloc_test`; React Vitest + Testing Library; contract-drift check in
 CI
 
-**Target Platform**: Linux containers (backend, Native AOT–published); modern browsers (React web
-dashboard); iOS + Android (Flutter mobile). **Flutter Web is not a target.**
+**Target Platform**: Linux containers (backend; whole-host Native AOT publish is a gated Phase 8
+goal per constitution v2.2.0, not the current build mode — the hot-path assemblies are the
+AOT-clean guarantee); modern browsers (React web dashboard); iOS + Android (Flutter mobile).
+**Flutter Web is not a target.**
 
 **Project Type**: Web + Mobile + API — .NET Web API backend, React web dashboard, Flutter mobile app
 
@@ -61,8 +63,9 @@ dashboard); iOS + Android (Flutter mobile). **Flutter Web is not a target.**
 kill-switch / cache invalidation < 100ms across nodes; deterministic bucketing (100% reproducible);
 rollout within ±1pp; login < 5s; critical-event push < 10s
 
-**Constraints**: Native AOT + trim compatible backend (no unbounded reflection/dynamic/runtime
-codegen on hot paths); nullable enabled; AOT/trim warnings fail the build; evaluation fails safe to
+**Constraints**: AOT + trim compatible hot path (no unbounded reflection/dynamic/runtime
+codegen); nullable enabled; AOT/trim warnings fail the build on `OptiPulse.Evaluation.*`;
+production schema path is PostgreSQL-authored migrations (SQLite is dev/edge via schema creation); evaluation fails safe to
 last-known-good; kill-switch fails safe to "off"; auth/authorization server-side only; clients hold
 no signing secrets; CI fails on OpenAPI contract drift
 
@@ -77,8 +80,8 @@ four bounded contexts + Identity & Access; two clients
 |-----------|-------------|-----------------|
 | I. Clean Architecture & Layer Discipline | Inward-only deps; framework behind interfaces; React exempt but API behind typed client | Backend Domain/Application/Infrastructure/Api per context; Flutter layered; React keeps API access behind the generated typed client layer. **PASS** |
 | II. Zero-Allocation Performance (NON-NEGOTIABLE) | <5ms eval, MurmurHash3, zero-alloc, benchmark-gated | Lock-free immutable snapshot, MurmurHash3 over spans; BenchmarkDotNet gate asserts 0 B + sub-5ms. **PASS** |
-| III. .NET 10 Modern Standards (NON-NEGOTIABLE) | .NET 10, Native AOT, modern C#, warnings=errors | `PublishAot=true`, nullable, source-gen JSON, no dynamic on hot path; AOT/trim warnings = errors. **PASS** |
-| IV. Resilience & Fail-Safe Kill-Switch | Polly on all deps; <100ms Redis Pub/Sub; fail-safe last-known-good | Polly v8 pipelines on Postgres/Redis/AI/push; kill-switch precedence over Pub/Sub; last-known-good snapshot. **PASS** |
+| III. .NET 10 Modern Standards (NON-NEGOTIABLE) | .NET 10, AOT-clean hot path, modern C#, warnings=errors | Nullable, source-gen JSON, no dynamic on hot path; AOT/trim analyzers enabled as **errors** on `OptiPulse.Evaluation.*`. `PublishAot` deliberately **NOT** set on the API host — per constitution v2.2.0 it is not publish-only and makes EF Core refuse model building, preventing startup; whole-host AOT publish is gated on T085 (compiled models + migrations off the startup path). **PASS at the scoped guarantee** |
+| IV. Resilience & Fail-Safe Kill-Switch | Polly on management/persistence/provider paths; hot path exempt; <100ms Redis Pub/Sub; fail-safe last-known-good | Polly v8 pipelines on Postgres/Redis/AI/push, each wired to a real call site (an unused pipeline is a v2.2.0 violation — see T012a); evaluation hot path exempt by design and resilient structurally; startup does not depend on Redis; kill-switch precedence over Pub/Sub; last-known-good snapshot. **PARTIAL — T012a outstanding** |
 | V. Dual-Client Strategy | React always-online + lightweight; Flutter offline-first Clean Arch; no client auth logic | React (custom hooks, no Redux, always-online) + Flutter (BLoC/HydratedBloc, offline-first, iOS/Android only); both consume governed contract; neither holds auth logic. **PASS** |
 | VI. Backend-Contained Auth | Custom JWT/RBAC server-side; opaque tokens; no client secrets | JWT issuance/validation + authorization policies in backend; rotating refresh tokens; roles Manager/Admin; clients opaque. **PASS** |
 | VII. Contract-First API Security | Native OpenAPI authoritative; CI fails on drift across clients | `Microsoft.AspNetCore.OpenApi` emits spec; TS + Dart generated from it; CI regenerate-and-diff gate. **PASS** |

@@ -32,7 +32,7 @@ public sealed class FailSafeTests
     {
         // Simulates a datastore/Redis outage: the snapshot was loaded once, then
         // no further deltas ever arrive. Evaluation must keep succeeding.
-        var store = new SnapshotStore();
+        var store = new SnapshotStore(TimeProvider.System);
         store.LoadInitial(new FlagSnapshot(5, DateTimeOffset.UtcNow, [Flag("feature.a", outcome: true, version: 5)]));
         var evaluator = new Evaluator(store);
 
@@ -50,7 +50,7 @@ public sealed class FailSafeTests
     {
         // Out-of-order / duplicate delivery must never regress a flag to an older
         // state (invalidation-channel.md subscriber rule 1).
-        var store = new SnapshotStore();
+        var store = new SnapshotStore(TimeProvider.System);
         store.LoadInitial(new FlagSnapshot(10, DateTimeOffset.UtcNow, [Flag("feature.a", outcome: true, version: 10)]));
 
         store.ApplyDelta(Flag("feature.a", outcome: false, version: 3), newVersion: 3);
@@ -65,7 +65,7 @@ public sealed class FailSafeTests
         // Regression guard: flags are versioned independently, so a new flag's
         // version-1 delta must apply even though an unrelated flag has already
         // pushed the snapshot-wide version far higher.
-        var store = new SnapshotStore();
+        var store = new SnapshotStore(TimeProvider.System);
         store.LoadInitial(new FlagSnapshot(99, DateTimeOffset.UtcNow, [Flag("feature.a", outcome: true, version: 99)]));
 
         store.ApplyDelta(Flag("feature.b", outcome: true, version: 1), newVersion: 1);
@@ -80,7 +80,7 @@ public sealed class FailSafeTests
     {
         // Worst case: the datastore was unavailable at startup, so no snapshot
         // ever loaded. Evaluation must still answer (safe default), not fail.
-        var store = new SnapshotStore();
+        var store = new SnapshotStore(TimeProvider.System);
         var evaluator = new Evaluator(store);
 
         var act = () => evaluator.Evaluate(new EvaluationContext("anything", "user-1", null));

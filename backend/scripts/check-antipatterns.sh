@@ -22,6 +22,10 @@ fi
 echo "Checking ${#FILES[@]} C# file(s) for anti-patterns..."
 ERRORS=0
 
+# Files permitted to name a clock directly. Keep this list empty-by-default and justify any
+# entry: every exemption is a place where time cannot be controlled in a test.
+EXEMPT_TIME_FILES=""
+
 # Strips single-line comments (// ...) and whole-line block comments so that
 # discussing an anti-pattern in a code comment does not trip the gate — only
 # actual code is checked.
@@ -47,7 +51,16 @@ check_pattern() {
 for FILE in "${FILES[@]}"; do
   [[ -f "$FILE" ]] || continue
 
-  check_pattern "$FILE" 'DateTime\.\(Now\|UtcNow\)' '⚠️'
+  # Constitution v2.2.0: DateTimeOffset is banned alongside DateTime in PRODUCTION code. The
+  # earlier DateTime-only pattern let `DateTimeOffset.UtcNow` through, so audit timestamps and
+  # snapshot times were unmockable while this gate still reported clean.
+  #
+  # Scoped to src/ deliberately: the rule exists so production time is injectable and therefore
+  # controllable in a test. A test constructing its own fixed timestamp is the goal, not a
+  # violation of it — banning it there would push tests toward indirection for no benefit.
+  if [[ "$FILE" == src/* ]] && [[ " $EXEMPT_TIME_FILES " != *" $FILE "* ]]; then
+    check_pattern "$FILE" 'DateTime\(Offset\)\?\.\(Now\|UtcNow\)' '⚠️'
+  fi
   check_pattern "$FILE" 'new HttpClient()' '⚠️'
   check_pattern "$FILE" 'async void' '🔴' 'EventArgs'
   check_pattern "$FILE" '\.Result\b\|\.GetAwaiter()\.GetResult()' '🔴'

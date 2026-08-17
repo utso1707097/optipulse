@@ -35,7 +35,8 @@ description: "Task list for OptiPulse Platform implementation"
 - [X] T001 Create repository structure (`backend/`, `web/`, `mobile/`, `contracts-gen/`) per [plan.md](plan.md)
 - [X] T002 Initialize .NET 10 solution `backend/OptiPulse.sln` with per-context projects (SharedKernel, IdentityAccess, EvaluationEngine.{Domain,Application,Infrastructure}, FlagManagement.{…}, AiGateway.{…}, AuditTelemetry.{…}, OptiPulse.Api)
 - [X] T003 [P] Enable `<Nullable>enable</Nullable>`, `<PublishAot>true</PublishAot>`, and `-warnaserror` (incl. AOT/trim analyzers) in `backend/Directory.Build.props`
-- [X] T003a [P] Enable central package management: create `backend/Directory.Packages.props` with `<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>` and pin the baseline packages (Polly via `Microsoft.Extensions.Http.Resilience`, EF Core 10 + Npgsql, StackExchange.Redis, Serilog + OpenTelemetry, `Asp.Versioning`, xUnit v3, Testcontainers) — no hardcoded versions in `.csproj` (constitution v2.1.0 package baseline)
+- [X] T003a [P] Enable central package management: create `backend/Directory.Packages.props` with `<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>` and pin the baseline packages (Polly via `Microsoft.Extensions.Http.Resilience`, EF Core 10 + Npgsql, StackExchange.Redis, Serilog + OpenTelemetry, `Asp.Versioning`, xUnit, Testcontainers) — no hardcoded versions in `.csproj` (constitution package baseline)
+- [X] T003b Add the two baseline packages T003a claimed but never pinned (verified absent: no `Asp.Versioning` reference anywhere; `xunit` is 2.9.3). Add `Asp.Versioning.Http` to `backend/Directory.Packages.props` and adopt it in `OptiPulse.Api` **now, while only 7 endpoints exist** — Phase 5 adds ~15 more and retrofitting versioning across the larger surface is materially more expensive (constitution v2.2.0 package baseline). The xUnit v3 pin was corrected to v2 in the constitution instead of migrating, so no test-framework change is required
 - [X] T004 [P] Scaffold React app `web/optipulse_dashboard/` with Vite + TypeScript; add Vitest + Testing Library; configure ESLint/Prettier (no Redux/MobX/Zustand deps)
 - [X] T005 [P] Scaffold Flutter app `mobile/optipulse_app/` (iOS + Android targets only) with flutter_bloc, hydrated_bloc, dio, get_it/injectable
 - [X] T006 [P] Configure backend test projects `backend/tests/OptiPulse.UnitTests`, `OptiPulse.IntegrationTests` (xUnit + FluentAssertions + Testcontainers), `OptiPulse.Evaluation.Benchmarks` (BenchmarkDotNet)
@@ -59,6 +60,7 @@ description: "Task list for OptiPulse Platform implementation"
 - [X] T010 Create a **per-context** EF Core 10 `DbContext` (`FlagsDbContext`, `AuditDbContext`, `IdentityDbContext`) — one per bounded context/subdomain, each in its own `backend/src/<Context>/Infrastructure/Persistence/` — over the shared physical database, with SQLite/PostgreSQL provider switching (config-driven) and compiled-model setup. No single shared `AppDbContext` (preserves context isolation, Principle I)
 - [X] T011 Configure the migrations framework and initial empty migration; verify SQLite (dev) and Postgres (Testcontainers) both apply
 - [X] T012 [P] Implement Redis connection + named Polly v8 resilience pipelines (timeout→retry→circuit-breaker) for Postgres/Redis in `backend/src/*/Infrastructure/Resilience/`
+- [ ] T012a Wire the T012 resilience pipelines to actual call sites — they are currently **registered with zero consumers**, which constitution v2.2.0 Principle IV now names a violation rather than compliance (verified: the only file referencing `ResiliencePipeline` is `ResilienceExtensions.cs` itself). Apply to the management/persistence and invalidation-publish paths; the evaluation hot path stays exempt by design (Principle II / IV hot-path exemption). Remove any pipeline that has no legitimate consumer
 - [X] T013 [P] Configure ASP.NET Core Minimal API host, middleware pipeline, centralized error handling (Result + ProblemDetails), and structured logging + telemetry (**Serilog + OpenTelemetry**) in `backend/src/OptiPulse.Api/Program.cs`
 - [X] T014 [P] Enable native OpenAPI document generation (`Microsoft.AspNetCore.OpenApi`) and expose `openapi.json` in `backend/src/OptiPulse.Api/`
 - [X] T015 [P] Implement append-only audit store + `IAuditLog` interface (insert-only; no UPDATE/DELETE grants) in `backend/src/AuditTelemetry/{Application,Infrastructure}/` per [data-model.md](data-model.md)
@@ -92,7 +94,7 @@ description: "Task list for OptiPulse Platform implementation"
 - [X] T027 [US1] Implement Redis Pub/Sub subscriber applying deltas with version/kill-switch precedence + periodic reconciliation backstop per [contracts/invalidation-channel.md](contracts/invalidation-channel.md) in `backend/src/EvaluationEngine/OptiPulse.Evaluation.Infrastructure/InvalidationSubscriber.cs`
 - [X] T028 [P] [US1] Implement async `ExposureEvent` writer (bounded channel, off hot path) in `backend/src/AuditTelemetry/OptiPulse.Audit.Infrastructure/ExposureWriter.cs`
 - [X] T029 [US1] Implement `VariantExposureCount` aggregation (windowed) in `backend/src/AuditTelemetry/OptiPulse.Audit.Application/ExposureAggregator.cs` (depends on T028)
-- [X] T030 [US1] Map evaluation Minimal API endpoints (`/evaluate`, `/evaluate/batch`, `/snapshot/version`) with service-account auth in `backend/src/OptiPulse.Api/Endpoints/EvaluationEndpoints.cs`
+- [X] T030 [US1] Map evaluation Minimal API endpoints (`/evaluate`, `/evaluate/batch`, `/snapshot/version`) in `backend/src/OptiPulse.Api/Endpoints/EvaluationEndpoints.cs` — ⚠️ endpoints are **anonymous**; the "service-account auth" originally claimed here does not exist and is now tracked as T041a (constitution v2.2.0 Principle VI requires this be stated, not implied)
 - [X] T031 [US1] Emit exposure events from evaluation when under an experiment; wire logging/`reason` codes in `backend/src/OptiPulse.Api/Endpoints/EvaluationEndpoints.cs`
 
 **Checkpoint**: US1 is a functional, benchmarked, fail-safe evaluation service — deployable MVP.
@@ -119,9 +121,28 @@ description: "Task list for OptiPulse Platform implementation"
 - [X] T038 [US2] Register JWT bearer authentication + `Manager`/`Admin` authorization policies in `backend/src/OptiPulse.Api/Auth/AuthConfiguration.cs`
 - [X] T039 [US2] Map `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me` endpoints in `backend/src/OptiPulse.Api/Endpoints/AuthEndpoints.cs`
 - [X] T040 [US2] Write audit entries for login success/failure, logout, and role-denied attempts via `IAuditLog` in `backend/src/OptiPulse.Api/Auth/` (uses T015)
-- [X] T041 [US2] Apply `[Authorize]` policies to existing evaluation service-account endpoints and document required roles in `backend/src/OptiPulse.Api/Endpoints/`
+- [X] T041 [US2] Apply authorization policies to human-facing endpoints and document required roles in `backend/src/OptiPulse.Api/Endpoints/` — scope corrected: this covers the **human** (`Manager`/`Admin`) surface only, which is what FR-A05 governs
+- [ ] T041a Implement **service-account credentials** for the runtime evaluation surface (`/evaluate`, `/evaluate/batch`, `/snapshot/version`) in `backend/src/OptiPulse.IdentityAccess/` — a distinct credential type from human users per constitution v2.2.0 Principle VI: holds no human role, scoped to evaluation + telemetry ingest only, independently revocable. Until this lands the endpoints remain anonymous and MUST be documented as such (blocks the Principle VI claim in T087)
 
 **Checkpoint**: Full auth + RBAC enforced server-side; US3/US4 can now build authenticated flows.
+
+---
+
+## Phase 4a: Constitution v2.2.0 Remediation (do BEFORE Phase 5)
+
+**Purpose**: Close the gaps a grill-with-docs review found in the Phases 1–4 build, where governance
+text and the codebase disagreed. All findings were verified against the code, not inferred. These are
+sequenced before Phase 5 because each gets materially more expensive once ~15 more endpoints and a
+second client land.
+
+**Goal**: The gates enforce what the constitution says, and no task claims work that does not exist.
+
+- [X] T091 [P] Make the OpenAPI drift gate deterministic and non-vacuous (constitution v2.2.0 Principle VII) in `contracts-gen/generate.sh` + `.github/workflows/ci.yml`: (a) **pin** the generator — `npx --yes openapi-typescript` currently resolves the latest release at run time and is not in `package.json`, so an upstream release surfaces as phantom contract drift; (b) **strip environment-specific `servers`** from the committed spec, which currently hardcodes `http://localhost:5289/` and drifts for anyone using a non-default `OPTIPULSE_OPENAPI_PORT`; (c) **fail rather than skip** when a generator is unavailable. This is now urgent because the `protect-main` ruleset makes this gate a merge blocker
+- [X] T092 [P] Enforce the time-source rule the gate only half-checked (constitution v2.2.0): extend `backend/scripts/check-antipatterns.sh` to catch `DateTimeOffset.Now`/`DateTimeOffset.UtcNow` (it currently matches only `DateTime\.(Now|UtcNow)`), then inject `TimeProvider` at the **5 verified production sites** that slip past it today — `Program.cs:205`, `SnapshotStore.cs:42`, `AuditLog.cs:17`, `ExposureWriter.cs:38`. Audit timestamps and snapshot times are currently unmockable. Verify the tightened gate with a negative control before relying on it
+- [ ] T093 Replace the SQLite-authored EF migrations with **PostgreSQL-authored** ones (constitution v2.2.0 persistence section). `MigrateAsync` against Postgres fails today (`42804`: `DefaultOutcome` integer column vs boolean expression), so the production provider has no working schema path — only the `EnsureCreated` test strategy hides it. Author migrations against Postgres for the Flags, Audit and Identity contexts; keep SQLite on schema-creation for dev/edge. Do **not** maintain dual migration sets
+- [ ] T094 [P] Install `openapi-generator` (requires a JRE) in the CI drift-gate job so the **Dart** client is actually generated in `.github/workflows/ci.yml`. Today generation silently skips whenever the tool is absent — which is always, in CI — so the gate passes by diffing an empty directory and Flutter can drift from the server freely. Prerequisite for T072; until it lands, Flutter contract enforcement does not exist and MUST NOT be described as if it does
+
+**Checkpoint**: Constitution v2.2.0 and the codebase agree; every gate detects every pattern it names.
 
 ---
 
@@ -231,7 +252,7 @@ description: "Task list for OptiPulse Platform implementation"
 
 **Purpose**: Hardening and final validation across all stories.
 
-- [ ] T084 [P] Run the OpenAPI drift gate end-to-end and commit regenerated TS + Dart clients; confirm CI fails on an intentional drift in `contracts-gen/`
+- [ ] T084 [P] Run the OpenAPI drift gate end-to-end and commit regenerated TS + Dart clients; confirm CI fails on an intentional drift in `contracts-gen/`. Must also confirm the gate fails when a generator is **missing** (not just when the spec differs) — depends on T091 + T094
 - [ ] T085 [P] Verify Native AOT publish of `backend/src/OptiPulse.Api` succeeds with zero trim/AOT warnings. **Blocked on two prerequisites discovered in Phase 4** (see the note in `backend/Directory.Build.props`): (a) generate compiled models via `dotnet ef dbcontext optimize` for the Flags, Audit and Identity contexts, because AOT sets `RuntimeFeature.IsDynamicCodeSupported=false` and EF Core then refuses runtime model building outright; and (b) move `MigrateAsync` off the startup path — migrations are `RequiresDynamicCode` (IL3050) and are not AOT-supported at all, so schema work must run as a separate non-AOT tool/job. `PublishAot` must stay unset until both are done: it is not publish-only, it changes the runtimeconfig of every build and prevents the host from starting
 - [ ] T086 [P] Confirm benchmark gate is enforced in CI (fails on >5ms or >0 B) per [quickstart.md](quickstart.md) V2
 - [ ] T087 [P] Security hardening pass: verify no signing secrets in clients, refresh tokens revocable, all protected endpoints carry policies
@@ -249,6 +270,9 @@ description: "Task list for OptiPulse Platform implementation"
 - **Foundational (Phase 2)**: depends on Setup — BLOCKS all user stories.
 - **US1 (Phase 3)**: after Foundational. Pure MVP — no dependency on other stories.
 - **US2 (Phase 4)**: after Foundational. Independent; US3/US4 authenticated flows depend on it.
+- **Remediation (Phase 4a)**: after US2. Independent of the user stories, but sequenced before Phase 5
+  because T003b (API versioning) and T091 (drift-gate determinism) get materially more expensive once
+  Phase 5 adds ~15 endpoints and Phase 6 adds a second client.
 - **US3 (Phase 5)**: after Foundational; consumes US1 (evaluation/telemetry) + US2 (auth).
 - **US4 (Phase 6)**: after Foundational; consumes US1 (kill-switch/telemetry) + US2 (auth).
 - **US5 (Phase 7)**: after Foundational; audit write-sites are populated by US2/US3/US4.
@@ -311,7 +335,7 @@ After Foundational: Team A → US1, Team B → US2. Once both land: Team C → U
 ## Notes
 
 - [P] = different files, no incomplete dependencies.
-- Constitution gates are enforced by tasks: zero-alloc/sub-5ms (T018/T086), Native AOT (T003/T085), OpenAPI drift (T017/T084), backend-only auth (T038/T087).
+- Constitution gates are enforced by tasks: zero-alloc/sub-5ms (T018/T086), Native AOT (T003/T085), OpenAPI drift (T017/T084/T091/T094), backend-only auth (T038/T087), service-account auth (T041a), Polly coverage (T012a), time source (T092), API versioning (T003b), Postgres schema path (T093).
 - US3/US4 legitimately depend on US2 (auth) and US1 (evaluation/telemetry) — documented above; each story remains independently testable behind those foundations.
 - Commit after each task or logical group; verify tests fail before implementing.
 - **Best-practice kit usage** (see [plan.md](plan.md) Development Tooling + [research.md](research.md) R13–R16):

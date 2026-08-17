@@ -12,7 +12,13 @@ namespace OptiPulse.Evaluation.Infrastructure;
 /// stays in place — the fail-safe-to-last-known-good behavior (FR-005) falls
 /// out of this design rather than needing special-case error handling.
 /// </summary>
-public sealed class SnapshotStore : ISnapshotStore, ISnapshotWriter
+/// <remarks>
+/// <see cref="TimeProvider"/> is injected per constitution v2.2.0 so the snapshot's
+/// <c>BuiltAt</c> is controllable in tests. It is only read on <see cref="ApplyDelta"/>
+/// (the invalidation path), never on the evaluation read path, so this does not put an
+/// indirection on the hot path that Principle II protects.
+/// </remarks>
+public sealed class SnapshotStore(TimeProvider timeProvider) : ISnapshotStore, ISnapshotWriter
 {
     private volatile FlagSnapshot _current = FlagSnapshot.Empty;
 
@@ -39,6 +45,6 @@ public sealed class SnapshotStore : ISnapshotStore, ISnapshotWriter
         }
 
         var snapshotVersion = Math.Max(_current.Version, newVersion);
-        _current = _current.WithUpdatedFlag(updated, snapshotVersion, DateTimeOffset.UtcNow);
+        _current = _current.WithUpdatedFlag(updated, snapshotVersion, timeProvider.GetUtcNow());
     }
 }

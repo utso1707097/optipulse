@@ -7,9 +7,16 @@ namespace OptiPulse.Api.Endpoints;
 
 public static class EvaluationEndpoints
 {
-    public static IEndpointRouteBuilder MapEvaluationEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapEvaluationEndpoints(
+        this IEndpointRouteBuilder app, Asp.Versioning.Builder.ApiVersionSet versionSet)
     {
-        var group = app.MapGroup("/api/v1");
+        // NOTE: these endpoints are intentionally ANONYMOUS and remain so until service-account
+        // credentials land (T041a). They are the runtime SDK surface for machine callers, which
+        // constitution v2.2.0 Principle VI defines as a credential type distinct from human
+        // Manager/Admin users — binding them to a human role would be incorrect, not safer.
+        var group = app.MapGroup(ApiVersioning.RoutePrefix)
+            .WithApiVersionSet(versionSet)
+            .MapToApiVersion(ApiVersioning.V1);
 
         group.MapPost("/evaluate", (
             EvaluateRequest request,

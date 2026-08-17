@@ -17,10 +17,12 @@ public sealed class ExposureWriter : IExposureRecorder
 {
     private readonly Channel<ExposureEvent> _channel;
     private readonly ILogger<ExposureWriter> _logger;
+    private readonly TimeProvider _timeProvider;
 
-    public ExposureWriter(ILogger<ExposureWriter> logger)
+    public ExposureWriter(ILogger<ExposureWriter> logger, TimeProvider timeProvider)
     {
         _logger = logger;
+        _timeProvider = timeProvider;
         _channel = Channel.CreateBounded<ExposureEvent>(new BoundedChannelOptions(capacity: 10_000)
         {
             FullMode = BoundedChannelFullMode.DropOldest,
@@ -35,7 +37,7 @@ public sealed class ExposureWriter : IExposureRecorder
     {
         var evt = new ExposureEvent(
             Id: 0, // assigned by the database on persist
-            Timestamp: DateTimeOffset.UtcNow,
+            Timestamp: _timeProvider.GetUtcNow(),
             FlagKey: flagKey,
             ExperimentId: experimentId,
             VariantKey: variantKey,

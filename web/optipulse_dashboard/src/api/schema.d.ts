@@ -20,22 +20,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["Refresh"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/auth/logout": {
         parameters: {
             query?: never;
@@ -62,6 +46,22 @@ export interface paths {
         get: operations["Me"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["Refresh"];
         delete?: never;
         options?: never;
         head?: never;
@@ -121,18 +121,18 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         BatchEvaluateRequest: {
-            contextKey: null | string;
             attributes: null | {
                 [key: string]: string;
             };
+            contextKey: null | string;
             flagKeys: string[];
         };
         EvaluateRequest: {
-            flagKey: string;
-            contextKey: null | string;
             attributes: null | {
                 [key: string]: string;
             };
+            contextKey: null | string;
+            flagKey: string;
         };
         LoginRequest: {
             email: string;
@@ -160,28 +160,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["LoginRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    Refresh: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RefreshRequest"];
             };
         };
         responses: {
@@ -224,6 +202,28 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    Refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

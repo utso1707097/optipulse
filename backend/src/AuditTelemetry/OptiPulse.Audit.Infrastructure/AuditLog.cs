@@ -4,7 +4,7 @@ using OptiPulse.SharedKernel;
 
 namespace OptiPulse.Audit.Infrastructure;
 
-public sealed class AuditLog(AuditDbContext dbContext) : IAuditLog
+public sealed class AuditLog(AuditDbContext dbContext, TimeProvider timeProvider) : IAuditLog
 {
     public async Task AppendAsync(
         ActorReference actor,
@@ -14,7 +14,8 @@ public sealed class AuditLog(AuditDbContext dbContext) : IAuditLog
         string? afterStateJson = null,
         CancellationToken cancellationToken = default)
     {
-        var entry = AuditEntry.Create(actor, changeType, targetId, DateTimeOffset.UtcNow, beforeStateJson, afterStateJson);
+        var entry = AuditEntry.Create(
+            actor, changeType, targetId, timeProvider.GetUtcNow(), beforeStateJson, afterStateJson);
         await dbContext.AuditEntries.AddAsync(entry, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
