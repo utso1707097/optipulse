@@ -228,6 +228,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/telemetry/conversions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RecordConversion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/telemetry/flags/{key}/exposures": {
         parameters: {
             query?: never;
@@ -257,6 +273,17 @@ export interface components {
         };
         ChangeStatusRequest: {
             status: string;
+        };
+        ConversionRequest: {
+            contextKey: null | string;
+            /** Format: uuid */
+            experimentId: null | string;
+            flagKey: string;
+            goal: string;
+            idempotencyKey: string;
+            /** Format: double */
+            value: null | number | string;
+            variantKey: null | string;
         };
         CreateExperimentRequest: {
             conversionGoal: null | string;
@@ -700,6 +727,28 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecordConversion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversionRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

@@ -288,8 +288,8 @@ deployment an operator can log into.
 ### Implementation for User Story 5
 
 - [ ] T080 [US5] Implement audit query endpoint (`GET /api/v1/audit`, filters + pagination, `Manager`/`Admin` read) in `backend/src/OptiPulse.Api/Endpoints/AuditEndpoints.cs`
-- [ ] T081 [US5] Enforce append-only immutability at the data layer (no UPDATE/DELETE grants; add DB-level guard/test) in `backend/src/AuditTelemetry/OptiPulse.Audit.Infrastructure/`
-- [ ] T082 [US5] Implement conversion ingest (`POST /api/v1/telemetry/conversions`, idempotent) in `backend/src/OptiPulse.Api/Endpoints/TelemetryEndpoints.cs` ⚠️ shared file with T055/T071 — do not run in parallel
+- [X] T081 [US5] Enforce append-only immutability at the data layer (no UPDATE/DELETE grants; add DB-level guard/test) in `backend/src/AuditTelemetry/OptiPulse.Audit.Infrastructure/`
+- [X] T082 [US5] Implement conversion ingest (`POST /api/v1/telemetry/conversions`, idempotent) in `backend/src/OptiPulse.Api/Endpoints/TelemetryEndpoints.cs` ⚠️ shared file with T055/T071 — do not run in parallel
 - [ ] T083 [US5] Audit-coverage sweep: ensure every mutating use case across contexts writes an `AuditEntry` with `ActorRole` in `backend/src/*/Application/`
 
 **Checkpoint**: Complete, immutable audit + reconciled telemetry.

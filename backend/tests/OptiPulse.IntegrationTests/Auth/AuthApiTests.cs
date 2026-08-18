@@ -128,14 +128,14 @@ public sealed class AuthApiTests(OptiPulseTestFixture fixture)
         await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(email, "wrong"));
 
         using var scope = fixture.Services.CreateScope();
-        var auditDb = scope.ServiceProvider.GetRequiredService<Audit.Infrastructure.AuditDbContext>();
+        var auditDb = scope.ServiceProvider.GetRequiredService<global::OptiPulse.Audit.Infrastructure.AuditDbContext>();
         var entries = auditDb.AuditEntries.ToList();
 
         entries.Should().Contain(e =>
-            e.ChangeType == Audit.Domain.AuditChangeType.LoginSucceeded &&
+            e.ChangeType == global::OptiPulse.Audit.Domain.AuditChangeType.LoginSucceeded &&
             e.AfterStateJson != null && e.AfterStateJson.Contains(email));
         entries.Should().Contain(e =>
-            e.ChangeType == Audit.Domain.AuditChangeType.LoginFailed &&
+            e.ChangeType == global::OptiPulse.Audit.Domain.AuditChangeType.LoginFailed &&
             e.AfterStateJson != null && e.AfterStateJson.Contains(email));
     }
 }

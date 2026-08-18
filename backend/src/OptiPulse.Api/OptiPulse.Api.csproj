@@ -5,6 +5,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- Workstation GC, not Server GC. Server GC allocates a heap and a dedicated collector
+         thread PER CORE, which is the right trade on a dedicated multi-core box and the wrong
+         one on the 0.5 vCPU / 512 MB instances this is deployed to: the extra heaps inflate
+         resident memory enough to risk the container being OOM-killed, for throughput this
+         workload does not need (evaluation is in-memory and allocation-free — see the
+         benchmark gate). Override with DOTNET_gcServer=1 if hosting on a larger instance. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <!-- PublishAot is deliberately NOT set here. It bakes
          RuntimeFeature.IsDynamicCodeSupported=false into the runtimeconfig for
          every build, which makes EF Core refuse to build a model at all and
