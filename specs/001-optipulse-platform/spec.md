@@ -170,6 +170,14 @@ A compliance or analytics stakeholder reviews an immutable record of who changed
 - **FR-029**: The Web Dashboard MUST assume network availability and MUST NOT present stale editable management state when offline.
 - **FR-030**: Both clients MUST consume the platform exclusively through the governed API contract and MUST NOT diverge from the server contract.
 
+**Deployment & First-Run Operability**
+
+- **FR-031**: The Web Dashboard MUST be able to reach the platform when served from a different origin than the API, and the set of permitted origins MUST be configurable per environment rather than fixed in code.
+- **FR-032**: A newly provisioned, empty environment MUST be reachable by an operator without direct database access: the platform MUST **bootstrap** an initial Manager account, an initial Admin account, and an initial service-account credential from configuration on first run.
+- **FR-033**: Bootstrap credentials MUST be supplied by configuration and MUST NOT default to any predictable or committed value. Outside development the platform MUST refuse to bootstrap rather than invent a credential.
+- **FR-034**: Bootstrap MUST be idempotent and MUST NOT alter or replace existing accounts on any subsequent start.
+- **FR-035**: The platform MUST be deployable as a self-contained container image configured entirely through environment variables, so that no deployment step depends on a developer workstation.
+
 **Audit & Telemetry**
 
 - **FR-019**: System MUST maintain an immutable audit log of all configuration changes capturing actor, role, timestamp, and before/after state.
@@ -236,6 +244,7 @@ Legend: ✅ full action · ➖ (read) read-only where noted · ➖ not permitted
 - **Clients**: Web Dashboard is always-online and lightweight; Mobile App is offline-tolerant. Each client is purpose-built for its audience and consumes the same governed backend contract.
 - **Push notifications**: Delivered via a standard mobile push mechanism; the provider is an implementation detail. Critical state is never conveyed solely by a push — it is always also retrievable in-app.
 - **AI provider**: Micro-copy generation is powered by a swappable external AI provider behind the AI Gateway; all generated content is draft until human-approved.
+- **Hosting**: The platform is deployed as a container image against a managed PostgreSQL instance and a managed Redis instance; the Web Dashboard is served as static assets from a separate origin. A demonstration deployment may run on hosting that suspends idle instances, so first-request latency after idle is a property of the host and is not evidence about the evaluation budget in SC-001.
 - **Determinism mechanism**: Deterministic bucketing uses a stable hashing scheme so results are reproducible across nodes; the algorithm is an implementation concern of the plan.
 - **Scale target**: High-throughput evaluation with global, multi-node distribution and near-real-time configuration propagation.
 - **Data retention**: Audit entries are retained per standard compliance practice (long-lived/immutable); telemetry is retained long enough to conclude and review experiments.
