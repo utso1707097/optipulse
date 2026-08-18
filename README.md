@@ -98,3 +98,10 @@ specific rules/hooks/skills adopted from them are documented in
 ## License
 
 TBD.
+
+## Deployment
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for a step-by-step guide to running OptiPulse on free
+infrastructure (Render + Neon + Upstash + Vercel), including every environment variable, the
+GitHub secrets that enable automatic deploys, and an honest list of what a free-tier deployment
+does and does not demonstrate.
