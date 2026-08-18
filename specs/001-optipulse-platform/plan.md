@@ -52,6 +52,15 @@ in-process immutable snapshot for evaluation; refresh-token store (EF Core, revo
 gate; Flutter `flutter_test` + `bloc_test`; React Vitest + Testing Library; contract-drift check in
 CI
 
+**Deployment topology** (constitution v2.3.0, FR-031/FR-035): the API ships as a container image
+against managed PostgreSQL and managed Redis; the React dashboard is served as **static assets from
+a different origin**. That split is why cross-origin access is a first-class concern rather than an
+afterthought — the browser refuses same-origin assumptions the moment the dashboard is not served by
+the API. Permitted origins come from configuration as an explicit allowlist (never a wildcard: this
+API carries bearer credentials and an Admin kill-switch), and the React client resolves its API base
+URL from `VITE_API_URL`. The Flutter app is unaffected — it is a native client and makes no
+same-origin assumption.
+
 **Target Platform**: Linux containers (backend; whole-host Native AOT publish is a gated Phase 8
 goal per constitution v2.2.0, not the current build mode — the hot-path assemblies are the
 AOT-clean guarantee); modern browsers (React web dashboard); iOS + Android (Flutter mobile).

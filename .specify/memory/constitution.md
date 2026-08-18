@@ -1,6 +1,23 @@
 <!--
 Sync Impact Report
 ==================
+Version change: 2.2.0 → 2.3.0
+Rationale: MINOR bump. Added a Deployment & First-Run Bootstrap baseline. The project had no
+governance covering how it reaches a running environment, and the gap became concrete when
+preparing a public demonstration deployment: nothing said an initial account may not use a
+predictable password, and nothing said CORS may not be opened to every origin. Both are one
+careless line away from exposing a live kill-switch. No principle removed or weakened.
+
+Added/updated sections:
+- Development Workflow & Quality Gates: added Deployment & First-Run Bootstrap.
+
+Downstream follow-up: spec.md gains FR-031..FR-034 (cross-origin access, first-run bootstrap,
+credential provenance, idempotence); tasks.md gains a deployment-enablement phase.
+-->
+
+<!--
+Sync Impact Report
+==================
 Version change: 2.1.0 → 2.2.0
 Rationale: MINOR bump. Four principles were materially clarified or expanded after a
 grill-with-docs review of the code built in Phases 1–4 (47/96 tasks) found governance text
@@ -340,6 +357,27 @@ server or from each other — but only if the gate actually runs both generators
 - Reviews: every PR MUST verify compliance with Principles I–VII; deviations MUST be justified
   in writing and approved, or the PR is rejected.
 
+### Deployment & First-Run Bootstrap
+
+- **The deployable artifact is a container image**, and it MUST be built by CI. A build file that
+  nothing exercises rots silently, and the first time anyone discovers it is when a deployment is
+  already needed.
+- **Initial credentials MUST come from configuration**, never from a literal in source, and MUST
+  NOT have a default. Outside Development the platform MUST refuse to bootstrap rather than
+  invent a credential. A demonstration deployment is a public deployment: shipping a known
+  account behind an endpoint that can operate the kill-switch is the same exposure as shipping
+  it in production, and "it is only a demo" is exactly the reasoning that produces the incident.
+- **Bootstrap MUST be idempotent** — it establishes accounts only into an empty environment and
+  MUST NOT modify existing ones. A restart is not an authorization event.
+- **Cross-origin access MUST be an explicit allowlist** drawn from configuration. A wildcard
+  origin on an API that carries bearer credentials and privileged operations is prohibited.
+- **Runtime configuration MUST be supplied by the environment**, and secrets MUST NOT be committed
+  in any form (Principle VI already forbids committing the signing key; this extends the same rule
+  to database credentials, Redis credentials, and bootstrap credentials).
+- **First-request latency on a suspending host is a hosting property, not a performance claim.**
+  Published performance evidence MUST come from the benchmark gate (Principle II), and a
+  demonstration deployment MUST NOT be presented as evidence for or against those budgets.
+
 ### Adopted Toolchain & Practice Baselines
 
 The project adopts three best-practice kits (kept under `.kits/`): the .NET kit (backend),
@@ -390,4 +428,4 @@ one direction — by fixing the code, or by amending this document with rational
 leaving the contradiction in place. A principle the code silently violates provides no
 governance while still implying that it does.
 
-**Version**: 2.2.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-17
+**Version**: 2.3.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-18

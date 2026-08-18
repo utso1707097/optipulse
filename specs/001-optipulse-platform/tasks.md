@@ -26,6 +26,28 @@ description: "Task list for OptiPulse Platform implementation"
 - Mobile App (Flutter): `mobile/optipulse_app/lib/`
 - Contract generation: `contracts-gen/`
 
+## Execution Order at a Glance
+
+Phases run **top to bottom in this document** — that is the build order. Task IDs are stable
+identifiers, **not** sequence numbers: they are cited by source-code comments, commit messages and
+the constitution, so they are never renumbered when a phase is inserted. That is why Phase 4a and
+Phase 5a carry high numbers while sitting early — both were added after the original plan, to close
+gaps found in work already built.
+
+| Order | Phase | Delivers | Tasks | Done |
+|-------|-------|----------|-------|------|
+| 1 | **Phase 1** | Setup | T001–T008d | ✅ |
+| 2 | **Phase 2** | Foundational | T009–T017 | ✅ |
+| 3 | **Phase 3** | Real-Time Flag Evaluation for Applications | T018–T031 | ✅ |
+| 4 | **Phase 4** | Authentication & Role-Based Access Control | T032–T041a | ✅ |
+| 5 | **Phase 4a** | Constitution v2.2.0 Remediation | T091–T095 | 4/5 |
+| 6 | **Phase 5** | Manager Web Dashboard: Flags, Experiments, Micro-Copy & Analytics | T042–T062 | 9/21 |
+| 7 | **Phase 5a** | Deployment Enablement | T096–T100 | 0/5 |
+| 8 | **Phase 6** | Admin & DevOps Mobile App: Telemetry, Push Alerts & Instant Kill-Switch | T063–T077 | 0/15 |
+| 9 | **Phase 7** | Immutable Audit Trail | T078–T083 | 0/6 |
+| 10 | **Phase 8** | Polish & Cross-Cutting Concerns | T084–T090 | 0/7 |
+
+**Where you are now**: Phases 1–4 complete. Phase 4a complete. Phase 5 backend complete (flags, experiments, analytics); its React screens and Phase 5a remain. The AI Gateway (T043, T052–T054) is deferred post-MVP.
 ---
 
 ## Phase 1: Setup (Shared Infrastructure)
@@ -187,6 +209,30 @@ second client land.
 - [ ] T062 [US3] Implement always-online guard (clear "requires connectivity" state, no stale editable state) in `web/optipulse_dashboard/src/components/ConnectivityGuard.tsx`
 
 **Checkpoint**: Managers can run the full authoring→experiment→copy→analytics loop on the web dashboard.
+
+---
+
+## Phase 5a: Deployment Enablement (do BEFORE the React dashboard)
+
+**Purpose**: Make the platform reachable from a browser on another origin, runnable as a
+container, and usable in an empty environment — the three things that currently block any
+deployment (verified: no CORS configuration, no Dockerfile, no way to create the first user).
+
+**Sequenced before the dashboard deliberately**: CORS and a configurable API base URL are
+dashboard-shaped decisions. Seven screens written against a same-origin assumption would each
+need reworking afterwards, the same way retrofitting API versioning across a large endpoint
+surface was avoided by adopting it at seven endpoints (T003b).
+
+**Goal**: `docker run` + environment variables produces a working, loginable deployment.
+
+- [ ] T096 [P] Add an explicit CORS allowlist read from configuration (`Cors:AllowedOrigins`) in `backend/src/OptiPulse.Api/Program.cs`, applied before authentication middleware. Wildcard origins are prohibited (constitution v2.3.0) — this API carries bearer credentials and an Admin kill-switch. FR-031
+- [ ] T097 [P] Add a multi-stage `backend/Dockerfile` (SDK build → runtime image, non-root user) and a `docker build` step in `.github/workflows/ci.yml`, so the deployable artifact is exercised on every PR rather than discovered broken at deploy time (constitution v2.3.0). FR-035
+- [ ] T098 Implement idempotent first-run bootstrap in `backend/src/OptiPulse.Api/` — seeds one Manager, one Admin, and one service-account credential **only when the corresponding tables are empty**, entirely from configuration (`Bootstrap:*`). No default or literal credential; outside Development the host MUST refuse to bootstrap when configuration is absent rather than invent one. The generated service-account key is written to the log exactly once at startup, never persisted in plaintext. FR-032, FR-033, FR-034
+- [ ] T099 [P] Integration tests for bootstrap in `backend/tests/OptiPulse.IntegrationTests/Bootstrap/BootstrapTests.cs`: seeds into an empty environment; is a no-op on second start; does NOT modify an existing account; refuses to seed outside Development without configuration. FR-034
+- [ ] T100 [P] Make the React API base URL configurable via `VITE_API_URL` (falling back to same-origin for local dev) in `web/optipulse_dashboard/src/api/`, so the dashboard can be served from a different origin than the API. FR-031
+
+**Checkpoint**: an empty PostgreSQL + Redis + the container image + environment variables yields a
+deployment an operator can log into.
 
 ---
 
