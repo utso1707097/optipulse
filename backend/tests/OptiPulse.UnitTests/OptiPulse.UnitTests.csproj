@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\FlagManagement\OptiPulse.Flags.Domain\OptiPulse.Flags.Domain.csproj" />
     <ProjectReference Include="..\..\src\EvaluationEngine\OptiPulse.Evaluation.Domain\OptiPulse.Evaluation.Domain.csproj" />
     <ProjectReference Include="..\..\src\EvaluationEngine\OptiPulse.Evaluation.Application\OptiPulse.Evaluation.Application.csproj" />
     <ProjectReference Include="..\..\src\AuditTelemetry\OptiPulse.Audit.Domain\OptiPulse.Audit.Domain.csproj" />
