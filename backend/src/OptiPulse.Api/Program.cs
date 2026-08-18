@@ -78,6 +78,7 @@ try
     // Custom JWT authentication + RBAC policies (Principle VI).
     builder.Services.AddOptiPulseAuth(builder.Configuration, builder.Environment.IsDevelopment());
     builder.Services.AddOptiPulseVersioning();
+    builder.Services.AddOptiPulseCors(builder.Configuration);
 
     builder.Services.AddScoped<IFlagConfigurationReader, FlagConfigurationReader>();
 
@@ -124,6 +125,8 @@ try
     app.UseExceptionHandler();
     app.UseStatusCodePages();
 
+    app.UseCors(CorsConfiguration.PolicyName);
+
     app.UseAuthentication();
     app.UseAuthorization();
 
@@ -142,6 +145,7 @@ try
     app.MapTelemetryEndpoints(versionSet);
 
     await BootstrapAsync(app);
+    await BootstrapSeeder.SeedAsync(app);
 
     app.Run();
 }

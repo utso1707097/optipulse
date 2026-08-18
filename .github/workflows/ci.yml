@@ -34,6 +34,12 @@ jobs:
       - name: Test
         run: dotnet test --no-build --verbosity normal
 
+      # T097 — the deployable artifact is built on every PR. A Dockerfile that nothing
+      # exercises rots silently, and the first person to discover it is whoever is trying
+      # to deploy (constitution v2.3.0).
+      - name: Build container image
+        run: docker build -t optipulse-api:ci .
+
       # Constitution Principle II — zero-allocation, sub-5ms evaluation gate.
       - name: Evaluation benchmark gate
         run: dotnet run -c Release --project tests/OptiPulse.Evaluation.Benchmarks --no-launch-profile -- --filter '*' --exporters json
