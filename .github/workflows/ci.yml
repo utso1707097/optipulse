@@ -147,3 +147,91 @@ jobs:
           else
             echo "::notice::Skipping flutter test - lib/ has no Dart source yet (scaffold; see T063-T077)."
           fi
+
+  # ---------------------------------------------------------------------------
+  # Continuous deployment. Runs ONLY on a push to main, and ONLY after every gate
+  # above has passed — `needs` makes a red build physically unable to deploy,
+  # which is the same reasoning as the branch ruleset: a check that cannot block
+  # is advice, not a gate.
+  #
+  # Deployment is skipped rather than failed when its secret is absent, so the
+  # repository still builds green for anyone who forks it without a Render or
+  # Vercel account.
+  # ---------------------------------------------------------------------------
+  deploy-backend:
+    name: Deploy API (Render)
+    runs-on: ubuntu-latest
+    needs: [backend, contracts-drift, web, mobile]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Trigger Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::notice::RENDER_DEPLOY_HOOK_URL not set — skipping backend deploy."
+            exit 0
+          fi
+          # Render's hook returns the deploy id; -f makes a non-2xx a failed step rather
+          # than a silent no-op that looks deployed.
+          curl -fsS -X POST "$HOOK" -o response.json
+          echo "Triggered: $(cat response.json)"
+
+      - name: Wait for the new instance to report healthy
+        env:
+          BASE: ${{ secrets.RENDER_API_BASE_URL }}
+        run: |
+          if [ -z "$BASE" ]; then
+            echo "::notice::RENDER_API_BASE_URL not set — skipping post-deploy health check."
+            exit 0
+          fi
+          # A deploy that starts is not a deploy that works. Poll readiness, which checks the
+          # database, so a broken migration or a bad connection string fails the pipeline
+          # instead of quietly leaving a dead instance serving 503s.
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/health/ready" || true)
+            if [ "$code" = "200" ]; then
+              echo "Healthy after ~$((i * 15))s."
+              exit 0
+            fi
+            echo "attempt $i: /health/ready returned $code"
+            sleep 15
+          done
+          echo "::error::New deployment never reported ready."
+          exit 1
+
+  deploy-web:
+    name: Deploy Dashboard (Vercel)
+    runs-on: ubuntu-latest
+    needs: [backend, contracts-drift, web, mobile]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    defaults:
+      run:
+        working-directory: web/optipulse_dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/optipulse_dashboard/package-lock.json
+
+      - name: Deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          # Baked in at build time (Vite inlines it), so it must be present HERE, not in
+          # Vercel's runtime settings — a static bundle has no runtime env to read.
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::notice::VERCEL_TOKEN not set — skipping dashboard deploy."
+            exit 0
+          fi
+          npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"

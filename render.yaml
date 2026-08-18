@@ -1,0 +1,46 @@
+# Render Blueprint — infrastructure as code, so the deployment is reproducible and reviewable
+# rather than a set of clicks in a dashboard nobody can diff.
+#
+# NOTE: Postgres and Redis are NOT declared here on purpose. Render's free PostgreSQL has
+# historically been deleted after a trial window, which would take the audit trail and every flag
+# with it. Neon (Postgres) and Upstash (Redis) have free tiers that persist, so they are attached
+# by connection string instead. Swap them in here if you move to a paid Render plan.
+services:
+  - type: web
+    name: optipulse-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health/live
+    autoDeploy: false # deploys are triggered by CI after all gates pass, never on raw push
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Database__Provider
+        value: Postgres
+      - key: Database__SchemaStrategy
+        value: Migrate
+      # Every value below is a SECRET and must be set in the Render dashboard, never here.
+      # sync: false means "prompt me, do not store in git".
+      - key: ConnectionStrings__Flags
+        sync: false
+      - key: ConnectionStrings__Audit
+        sync: false
+      - key: ConnectionStrings__Identity
+        sync: false
+      - key: Redis__ConnectionString
+        sync: false
+      - key: Jwt__SigningKey
+        sync: false
+      - key: Bootstrap__Manager__Email
+        sync: false
+      - key: Bootstrap__Manager__Password
+        sync: false
+      - key: Bootstrap__Admin__Email
+        sync: false
+      - key: Bootstrap__Admin__Password
+        sync: false
+      - key: Cors__AllowedOrigins__0
+        sync: false

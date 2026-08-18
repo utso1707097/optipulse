@@ -39,14 +39,24 @@ try
         .ReadFrom.Services(services)
         .WriteTo.Console());
 
+    // The console exporter is DEVELOPMENT ONLY. In production it writes every span and every
+    // metric to stdout: on a small instance that is both log noise that buries real errors and
+    // measurable CPU spent formatting telemetry nobody reads. Instrumentation stays on, so
+    // attaching a real OTLP exporter later is a configuration change, not a code change.
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("OptiPulse.Api"))
-        .WithTracing(tracing => tracing
-            .AddAspNetCoreInstrumentation()
-            .AddConsoleExporter())
-        .WithMetrics(metrics => metrics
-            .AddAspNetCoreInstrumentation()
-            .AddConsoleExporter());
+        .WithTracing(tracing =>
+        {
+            tracing.AddAspNetCoreInstrumentation();
+            if (builder.Environment.IsDevelopment())
+                tracing.AddConsoleExporter();
+        })
+        .WithMetrics(metrics =>
+        {
+            metrics.AddAspNetCoreInstrumentation();
+            if (builder.Environment.IsDevelopment())
+                metrics.AddConsoleExporter();
+        });
 
     builder.Services.AddProblemDetails();
 
@@ -138,6 +148,7 @@ try
     // One shared version set for every group, so introducing v2 later is a change in
     // ApiVersioning rather than a sweep of hardcoded route strings (Principle VII).
     var versionSet = app.CreateVersionSet();
+    app.MapHealthEndpoints();
     app.MapAuthEndpoints(versionSet);
     app.MapEvaluationEndpoints(versionSet);
     app.MapManagementEndpoints(versionSet);
