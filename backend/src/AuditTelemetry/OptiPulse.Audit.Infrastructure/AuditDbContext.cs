@@ -13,6 +13,7 @@ public sealed class AuditDbContext(DbContextOptions<AuditDbContext> options) : D
 {
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<ExposureEvent> ExposureEvents => Set<ExposureEvent>();
+    public DbSet<ConversionEvent> ConversionEvents => Set<ConversionEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -23,6 +24,25 @@ public sealed class AuditDbContext(DbContextOptions<AuditDbContext> options) : D
             builder.Property(e => e.Id).ValueGeneratedOnAdd();
             builder.HasIndex(e => e.FlagKey);
             builder.HasIndex(e => e.Timestamp);
+        });
+
+        modelBuilder.Entity<ConversionEvent>(builder =>
+        {
+            builder.ToTable("ConversionEvents");
+            builder.HasKey(e => e.Id);
+            builder.Property(e => e.Id).ValueGeneratedOnAdd();
+            builder.Property(e => e.FlagKey).IsRequired().HasMaxLength(120);
+            builder.Property(e => e.Goal).IsRequired().HasMaxLength(120);
+            builder.Property(e => e.IdempotencyKey).IsRequired().HasMaxLength(200);
+            builder.Property(e => e.VariantKey).HasMaxLength(120);
+            builder.Property(e => e.ContextKey).HasMaxLength(200);
+            builder.Property(e => e.Value).HasPrecision(18, 4);
+
+            // UNIQUE, and this is the whole point: a retried report must collide here rather
+            // than insert a second row. Enforced by the database, not by a read-then-write in
+            // application code, which would race with a concurrent duplicate.
+            builder.HasIndex(e => e.IdempotencyKey).IsUnique();
+            builder.HasIndex(e => e.FlagKey);
         });
 
         modelBuilder.Entity<AuditEntry>(builder =>
@@ -46,9 +66,46 @@ public sealed class AuditDbContext(DbContextOptions<AuditDbContext> options) : D
         });
     }
 
-    /// <summary>Append-only enforcement: any attempt to modify or delete a
-    /// persisted AuditEntry is rejected before it reaches the database.</summary>
+    /// <summary>
+    /// Append-only enforcement (FR-019, T081).
+    ///
+    /// BOTH save overloads are guarded. Only the async one was, which left a silent bypass:
+    /// `SaveChanges()` is a different virtual method, so an ordinary synchronous save would
+    /// modify or delete an audit row without ever reaching this check — and would pass every
+    /// test and every gate on the way.
+    ///
+    /// This is the application-layer half of the guarantee. It protects code going through this
+    /// DbContext and nothing else; anything holding the connection string (psql, a migration, a
+    /// raw SQL call, a restore) is unaffected. The database-level half is a trigger installed by
+    /// the AuditImmutability migration, which is what makes the claim true rather than merely
+    /// intended.
+    /// </summary>
+    public override int SaveChanges()
+    {
+        GuardAppendOnly();
+        return base.SaveChanges();
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        GuardAppendOnly();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        GuardAppendOnly();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        GuardAppendOnly();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void GuardAppendOnly()
     {
         foreach (var entry in ChangeTracker.Entries<AuditEntry>())
         {
@@ -56,7 +113,5 @@ public sealed class AuditDbContext(DbContextOptions<AuditDbContext> options) : D
                 throw new InvalidOperationException(
                     "AuditEntry is append-only — modification and deletion are not permitted (FR-019).");
         }
-
-        return base.SaveChangesAsync(cancellationToken);
     }
 }

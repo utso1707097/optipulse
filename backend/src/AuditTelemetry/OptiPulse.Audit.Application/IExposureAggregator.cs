@@ -16,7 +16,19 @@ public interface IExposureAggregator
     /// </summary>
     Task<IReadOnlyList<VariantExposureCount>> GetVariantExposureCountsAsync(
         string flagKey, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Per-variant conversion counts — the numerator of a conversion rate (T082). Reported
+    /// separately from exposures rather than pre-divided, so the caller can see BOTH numbers: a
+    /// rate alone hides whether it came from 3 conversions or 3,000, and those warrant very
+    /// different confidence in a result.
+    /// </summary>
+    Task<IReadOnlyList<VariantConversionCount>> GetVariantConversionCountsAsync(
+        string flagKey, CancellationToken cancellationToken = default);
 }
 
 /// <param name="VariantKey">Null for flag-level exposures recorded outside an experiment.</param>
 public sealed record VariantExposureCount(string? VariantKey, long Exposures);
+
+/// <param name="VariantKey">Null for conversions reported without a variant.</param>
+public sealed record VariantConversionCount(string? VariantKey, long Conversions);

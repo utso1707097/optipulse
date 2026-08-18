@@ -106,6 +106,7 @@ try
     });
     builder.Services.AddScoped<IAuditLog, AuditLog>();
     builder.Services.AddScoped<IExposureAggregator, ExposureAggregator>();
+    builder.Services.AddScoped<IConversionRecorder, ConversionRecorder>();
 
     builder.Services.AddOptiPulseRedis(builder.Configuration);
     builder.Services.AddOptiPulseResilience();

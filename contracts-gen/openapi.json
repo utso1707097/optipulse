@@ -43,6 +43,57 @@
         ],
         "type": "object"
       },
+      "ConversionRequest": {
+        "properties": {
+          "contextKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "experimentId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "flagKey": {
+            "type": "string"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "value": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "variantKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "flagKey",
+          "goal",
+          "idempotencyKey",
+          "contextKey",
+          "variantKey",
+          "experimentId",
+          "value"
+        ],
+        "type": "object"
+      },
       "CreateExperimentRequest": {
         "properties": {
           "conversionGoal": {
@@ -719,6 +770,29 @@
     "/api/v1/snapshot/version": {
       "get": {
         "operationId": "GetSnapshotVersion",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      }
+    },
+    "/api/v1/telemetry/conversions": {
+      "post": {
+        "operationId": "RecordConversion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversionRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK"

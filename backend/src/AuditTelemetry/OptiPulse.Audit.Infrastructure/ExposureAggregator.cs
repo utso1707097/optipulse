@@ -25,4 +25,19 @@ public sealed class ExposureAggregator(AuditDbContext dbContext) : IExposureAggr
             .OrderBy(g => g.VariantKey)
             .ToList();
     }
+
+    public async Task<IReadOnlyList<VariantConversionCount>> GetVariantConversionCountsAsync(
+        string flagKey, CancellationToken cancellationToken = default)
+    {
+        var grouped = await dbContext.ConversionEvents
+            .Where(c => c.FlagKey == flagKey)
+            .GroupBy(c => c.VariantKey)
+            .Select(g => new { VariantKey = g.Key, Conversions = g.LongCount() })
+            .ToListAsync(cancellationToken);
+
+        return grouped
+            .Select(g => new VariantConversionCount(g.VariantKey, g.Conversions))
+            .OrderBy(g => g.VariantKey)
+            .ToList();
+    }
 }
