@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using OptiPulse.Api.Auth;
 using OptiPulse.Audit.Application;
 using OptiPulse.Evaluation.Application;
 using OptiPulse.Evaluation.Domain;
@@ -10,13 +11,14 @@ public static class EvaluationEndpoints
     public static IEndpointRouteBuilder MapEvaluationEndpoints(
         this IEndpointRouteBuilder app, Asp.Versioning.Builder.ApiVersionSet versionSet)
     {
-        // NOTE: these endpoints are intentionally ANONYMOUS and remain so until service-account
-        // credentials land (T041a). They are the runtime SDK surface for machine callers, which
-        // constitution v2.2.0 Principle VI defines as a credential type distinct from human
-        // Manager/Admin users — binding them to a human role would be incorrect, not safer.
+        // The runtime SDK surface: authenticated by a SERVICE-ACCOUNT credential, never by a
+        // human Manager/Admin role (constitution v2.2.0 Principle VI). T041a — these endpoints
+        // were anonymous until this policy existed, because no credential type fitted a machine
+        // caller and binding them to a human role would have been wrong rather than safer.
         var group = app.MapGroup(ApiVersioning.RoutePrefix)
             .WithApiVersionSet(versionSet)
-            .MapToApiVersion(ApiVersioning.V1);
+            .MapToApiVersion(ApiVersioning.V1)
+            .RequireAuthorization(AuthConfiguration.ServiceAccountPolicy);
 
         group.MapPost("/evaluate", (
             EvaluateRequest request,
@@ -65,23 +67,17 @@ public static class EvaluationEndpoints
         })
         .WithName("GetSnapshotVersion");
 
-        // T041 — REQUIRED ROLES for this group.
+        // T041 / T041a — REQUIRED CREDENTIAL for this group: a service-account key
+        // (X-OptiPulse-Key), enforced by AuthConfiguration.ServiceAccountPolicy above.
         //
-        // Evaluation is the runtime SDK surface consumed by client applications
-        // via service-account tokens, not by human Manager/Admin users, so it is
-        // deliberately NOT bound to the Manager/Admin RBAC policies (spec Role
-        // Permission Matrix covers human capabilities only).
+        // NOT the Manager/Admin RBAC policies, deliberately: this is the runtime SDK surface
+        // consumed by client applications, and an SDK holds neither role. The spec's Role
+        // Permission Matrix covers human capabilities only; FR-A05's "all protected actions"
+        // refers to the management, kill-switch and AI-approval surfaces, which are
+        // role-bound separately.
         //
-        // Service-account authentication is its own concern (spec assumption:
-        // "client applications authenticate as service accounts") and the
-        // Identity & Access subdomain currently models human users only. Binding
-        // these endpoints to a human-role policy now would be wrong — an SDK
-        // holding a service token has neither Manager nor Admin. They therefore
-        // remain anonymous until the service-account credential type exists.
-        //
-        // This is a KNOWN GAP tracked for the service-account work, not an
-        // oversight: FR-A05's "all protected actions" refers to the management,
-        // kill-switch, and AI-approval surfaces, which ARE policy-bound.
+        // The policy is bound to the ServiceAccount authentication scheme, so a human JWT
+        // cannot satisfy it either — the separation runs in both directions.
 
         return app;
     }

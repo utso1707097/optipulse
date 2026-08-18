@@ -66,6 +66,26 @@ for FILE in "${FILES[@]}"; do
   check_pattern "$FILE" '\.Result\b\|\.GetAwaiter()\.GetResult()' '🔴'
 done
 
+# Constitution v2.2.0 Principle IV: "a registered resilience pipeline MUST have at least one
+# consumer. A pipeline that is registered and never used is a governance violation, not
+# compliance." This existed for real — two pipelines were registered and wired to nothing, so
+# the rule read as satisfied while the dependencies were unprotected. Gate it rather than
+# trusting review to notice.
+# `|| true` on both greps: with `set -euo pipefail`, a no-match grep (exit 1) would abort the
+# whole gate silently, which would be a gate that stops checking rather than one that passes.
+PIPELINE_NAMES=$( (grep -rhoE 'AddResiliencePipeline\([A-Za-z]+' --include='*.cs' src/ 2>/dev/null || true) \
+                  | sed -E 's/AddResiliencePipeline\(//' | sort -u )
+for NAME in $PIPELINE_NAMES; do
+  # Consumers usually qualify the constant (ResilienceExtensions.RedisPipeline), so match a
+  # trailing identifier path rather than the bare name.
+  CONSUMERS=$( (grep -rlE "GetPipeline\([A-Za-z.]*$NAME" --include='*.cs' src/ 2>/dev/null || true) | wc -l | tr -d ' ')
+  if [[ "$CONSUMERS" -eq 0 ]]; then
+    echo "🔴  Resilience pipeline '$NAME' is registered but never consumed (no GetPipeline($NAME))."
+    echo "    Wire it to a call site or remove it — constitution v2.2.0 Principle IV."
+    ERRORS=$((ERRORS + 1))
+  fi
+done
+
 if [[ $ERRORS -gt 0 ]]; then
   echo ""
   echo "Found $ERRORS anti-pattern issue(s). Fix before merging (constitution v2.1.0 gate)."

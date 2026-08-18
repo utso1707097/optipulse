@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using OptiPulse.IdentityAccess;
@@ -22,6 +23,13 @@ public static class AuthConfiguration
     /// <summary>Policy for capabilities shared by both roles (analytics and audit
     /// reads) — overlaps default to read-only per the permission matrix.</summary>
     public const string AnyRolePolicy = "RequireAnyRole";
+
+    /// <summary>
+    /// Runtime SDK surface (evaluation + telemetry ingest). Requires a service-account
+    /// credential and NOT a human role — see ServiceAccountAuthenticationHandler for why the
+    /// two are separate schemes rather than one principal with extra claims.
+    /// </summary>
+    public const string ServiceAccountPolicy = "RequireServiceAccount";
 
     public static IServiceCollection AddOptiPulseAuth(
         this IServiceCollection services, IConfiguration configuration, bool isDevelopment = false)
@@ -58,7 +66,9 @@ public static class AuthConfiguration
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
                     ClockSkew = TimeSpan.FromSeconds(30),
                 };
-            });
+            })
+            .AddScheme<AuthenticationSchemeOptions, ServiceAccountAuthenticationHandler>(
+                ServiceAccountAuthenticationHandler.SchemeName, _ => { });
 
         services.AddAuthorization(options =>
         {
@@ -70,10 +80,20 @@ public static class AuthConfiguration
 
             options.AddPolicy(AnyRolePolicy, policy =>
                 policy.RequireAuthenticatedUser().RequireRole(nameof(UserRole.Manager), nameof(UserRole.Admin)));
+
+            // Bound to the ServiceAccount scheme explicitly: without AuthenticationSchemes the
+            // policy would also accept a human JWT, which is precisely the conflation
+            // Principle VI forbids.
+            options.AddPolicy(ServiceAccountPolicy, policy => policy
+                .AddAuthenticationSchemes(ServiceAccountAuthenticationHandler.SchemeName)
+                .RequireAuthenticatedUser()
+                .RequireClaim(OptiPulseClaims.CallerType, OptiPulseClaims.ServiceAccountCallerType));
         });
 
         services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddSingleton<IServiceAccountAuthenticator, ServiceAccountAuthenticator>();
+        services.AddHostedService<ServiceAccountRefreshService>();
         services.TryAddSingletonTimeProvider();
 
         return services;

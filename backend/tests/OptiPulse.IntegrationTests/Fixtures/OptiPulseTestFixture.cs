@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OptiPulse.IdentityAccess;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
 using Xunit;
@@ -63,6 +64,35 @@ public sealed class OptiPulseTestFixture : WebApplicationFactory<Program>, IAsyn
                 new("Redis:ConnectionString", RedisConnectionString),
             ]);
         });
+    }
+
+    /// <summary>
+    /// Creates an active service account and returns its plaintext key (returned once, never
+    /// stored). Refreshes the authenticator snapshot immediately so the key is usable now
+    /// rather than after the background refresh interval.
+    /// </summary>
+    public async Task<string> CreateServiceAccountKeyAsync(string? name = null)
+    {
+        string plaintextKey;
+        using (var scope = Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+            var created = ServiceAccount.Create(name ?? $"test-sdk-{Guid.NewGuid():N}", DateTimeOffset.UtcNow).Value;
+            db.ServiceAccounts.Add(created.Account);
+            await db.SaveChangesAsync();
+            plaintextKey = created.PlaintextKey;
+        }
+
+        await Services.GetRequiredService<IServiceAccountAuthenticator>().RefreshAsync();
+        return plaintextKey;
+    }
+
+    /// <summary>An HttpClient presenting a service-account key on every request.</summary>
+    public HttpClient CreateServiceAccountClient(string plaintextKey)
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Add("X-OptiPulse-Key", plaintextKey);
+        return client;
     }
 
     async Task IAsyncLifetime.DisposeAsync()

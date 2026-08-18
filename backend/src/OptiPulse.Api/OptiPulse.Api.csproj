@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\OptiPulse.Resilience\OptiPulse.Resilience.csproj" />
     <ProjectReference Include="..\EvaluationEngine\OptiPulse.Evaluation.Application\OptiPulse.Evaluation.Application.csproj" />
     <ProjectReference Include="..\EvaluationEngine\OptiPulse.Evaluation.Infrastructure\OptiPulse.Evaluation.Infrastructure.csproj" />
     <ProjectReference Include="..\AuditTelemetry\OptiPulse.Audit.Application\OptiPulse.Audit.Application.csproj" />

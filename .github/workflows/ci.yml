@@ -56,6 +56,19 @@ jobs:
         with:
           node-version: "22"
 
+      # T094 — the Dart generator must be PRESENT, so the gate covers Flutter rather than
+      # silently skipping it (constitution v2.2.0 Principle VII: fail, never skip). It is a
+      # Java tool, hence the JDK. generate.sh still exempts Dart only while the Flutter client
+      # has no source at all, and switches enforcement on by itself once it does.
+      - name: Setup Java (required by openapi-generator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install openapi-generator
+        run: npm install -g @openapitools/openapi-generator-cli
+
       - name: Regenerate OpenAPI + clients
         run: bash contracts-gen/generate.sh
 

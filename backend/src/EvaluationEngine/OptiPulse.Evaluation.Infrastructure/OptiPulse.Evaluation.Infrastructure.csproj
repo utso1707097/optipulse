@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\..\OptiPulse.Resilience\OptiPulse.Resilience.csproj" />
     <ProjectReference Include="..\OptiPulse.Evaluation.Application\OptiPulse.Evaluation.Application.csproj" />
     <ProjectReference Include="..\OptiPulse.Evaluation.Domain\OptiPulse.Evaluation.Domain.csproj" />
     <ProjectReference Include="..\..\OptiPulse.SharedKernel\OptiPulse.SharedKernel.csproj" />
