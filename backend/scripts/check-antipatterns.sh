@@ -63,7 +63,11 @@ for FILE in "${FILES[@]}"; do
   fi
   check_pattern "$FILE" 'new HttpClient()' '⚠️'
   check_pattern "$FILE" 'async void' '🔴' 'EventArgs'
-  check_pattern "$FILE" '\.Result\b\|\.GetAwaiter()\.GetResult()' '🔴'
+  # `.Result` here means sync-over-async (blocking on a Task). Exclude type references such as
+  # `Task<Result<Flag>>` or `SharedKernel.Result`, which are followed by '<' or '>' — blocking on
+  # a task's .Result never is. Without this the gate flagged the Result pattern the constitution
+  # itself mandates for expected failures.
+  check_pattern "$FILE" '\.Result\b\|\.GetAwaiter()\.GetResult()' '🔴' '\.Result[<>]'
 done
 
 # Constitution v2.2.0 Principle IV: "a registered resilience pipeline MUST have at least one
