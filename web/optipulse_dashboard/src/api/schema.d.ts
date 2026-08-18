@@ -100,6 +100,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListFlags"];
+        put?: never;
+        post: operations["CreateFlag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/flags/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetFlag"];
+        put: operations["UpdateFlag"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/flags/{key}/kill-switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SetKillSwitch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/flags/{key}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ChangeFlagStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/snapshot/version": {
         parameters: {
             query?: never;
@@ -127,6 +191,16 @@ export interface components {
             contextKey: null | string;
             flagKeys: string[];
         };
+        ChangeStatusRequest: {
+            status: string;
+        };
+        CreateFlagRequest: {
+            defaultOutcome: boolean;
+            key: string;
+            name: string;
+            rollout: null | components["schemas"]["RolloutDto"];
+            targetingRules: null | components["schemas"]["TargetingRuleDto"][];
+        };
         EvaluateRequest: {
             attributes: null | {
                 [key: string]: string;
@@ -134,12 +208,32 @@ export interface components {
             contextKey: null | string;
             flagKey: string;
         };
+        KillSwitchRequest: {
+            engaged: boolean;
+        };
         LoginRequest: {
             email: string;
             password: string;
         };
         RefreshRequest: {
             refreshToken: string;
+        };
+        RolloutDto: {
+            /** Format: int32 */
+            percentage: number | string;
+            salt: string;
+        };
+        TargetingRuleDto: {
+            attribute: string;
+            operator: string;
+            outcome: boolean;
+            values: string[];
+        };
+        UpdateFlagRequest: {
+            defaultOutcome: boolean;
+            name: string;
+            rollout: null | components["schemas"]["RolloutDto"];
+            targetingRules: null | components["schemas"]["TargetingRuleDto"][];
         };
     };
     responses: never;
@@ -266,6 +360,138 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["BatchEvaluateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ListFlags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CreateFlag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateFlagRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetFlag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdateFlag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateFlagRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SetKillSwitch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KillSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ChangeFlagStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeStatusRequest"];
             };
         };
         responses: {

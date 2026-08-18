@@ -80,6 +80,17 @@ try
     builder.Services.AddOptiPulseVersioning();
 
     builder.Services.AddScoped<IFlagConfigurationReader, FlagConfigurationReader>();
+
+    // Flag Management write side (T048-T051).
+    builder.Services.AddScoped<IFlagRepository, FlagRepository>();
+    builder.Services.AddScoped<IInvalidationPublisher, InvalidationPublisher>();
+    builder.Services.AddScoped<IFlagAuditWriter, OptiPulse.Api.Adapters.FlagAuditWriter>();
+    builder.Services.AddScoped<FlagManagementService>();
+    builder.Services.AddSingleton(sp => new FlagInvalidationOptions
+    {
+        // Publisher and subscriber must agree on the channel or invalidation silently no-ops.
+        InvalidationChannel = sp.GetRequiredService<RedisOptions>().InvalidationChannel,
+    });
     builder.Services.AddScoped<IAuditLog, AuditLog>();
     builder.Services.AddScoped<IExposureAggregator, ExposureAggregator>();
 
@@ -124,6 +135,7 @@ try
     var versionSet = app.CreateVersionSet();
     app.MapAuthEndpoints(versionSet);
     app.MapEvaluationEndpoints(versionSet);
+    app.MapManagementEndpoints(versionSet);
 
     await BootstrapAsync(app);
 

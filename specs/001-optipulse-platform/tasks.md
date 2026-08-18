@@ -158,19 +158,19 @@ second client land.
 
 ### Tests for User Story 3
 
-- [ ] T042 [P] [US3] Contract tests for management API (flags CRUD, versioning/If-Match concurrency, experiments, kill-switch) per [contracts/management-api.md](contracts/management-api.md) in `backend/tests/OptiPulse.IntegrationTests/Management/ManagementApiTests.cs`
+- [X] T042 [P] [US3] Contract tests for management API (flags CRUD, versioning/If-Match concurrency, experiments, kill-switch) per [contracts/management-api.md](contracts/management-api.md) in `backend/tests/OptiPulse.IntegrationTests/Management/ManagementApiTests.cs`
 - [ ] T043 [P] [US3] Contract tests for AI Gateway (generate, review/approve, attach-only-approved, degraded provider) per [contracts/ai-gateway-api.md](contracts/ai-gateway-api.md) in `backend/tests/OptiPulse.IntegrationTests/Ai/AiGatewayApiTests.cs`
-- [ ] T044 [P] [US3] Integration test: concurrent-edit conflict returns 409 without silent overwrite in `backend/tests/OptiPulse.IntegrationTests/Management/ConcurrencyTests.cs`
+- [X] T044 [P] [US3] Integration test: concurrent-edit conflict returns 409 without silent overwrite in `backend/tests/OptiPulse.IntegrationTests/Management/ConcurrencyTests.cs`
 - [ ] T045 [P] [US3] React hook/component tests (useFlags, useAuth, flag-create flow) in `web/optipulse_dashboard/test/`
 
 ### Implementation for User Story 3 — Backend (Flag Management + AI Gateway)
 
-- [ ] T046 [P] [US3] Implement `Flag`, `TargetingRule`, `Rollout` aggregate + state machine in `backend/src/FlagManagement/OptiPulse.Flags.Domain/`
+- [X] T046 [P] [US3] Implement `Flag`, `TargetingRule`, `Rollout` aggregate + state machine in `backend/src/FlagManagement/OptiPulse.Flags.Domain/`
 - [ ] T047 [P] [US3] Implement `Experiment` + `Variant` aggregate (weight validation = 100%) in `backend/src/FlagManagement/OptiPulse.Flags.Domain/`
-- [ ] T048 [US3] Implement `IFlagRepository` (EF Core) with optimistic concurrency on `Version` in `backend/src/FlagManagement/OptiPulse.Flags.Infrastructure/FlagRepository.cs` (depends on T046, T047)
-- [ ] T049 [US3] Implement `IInvalidationPublisher` (Redis Pub/Sub, publish after commit) in `backend/src/FlagManagement/OptiPulse.Flags.Infrastructure/InvalidationPublisher.cs`
-- [ ] T050 [US3] Implement flag/experiment CQRS use cases (create/edit/status/version-restore, experiment CRUD) with audit writes in `backend/src/FlagManagement/OptiPulse.Flags.Application/`
-- [ ] T051 [US3] Map management endpoints (flags, experiments, kill-switch, versions) with `Manager` policy (kill-switch `Admin`) in `backend/src/OptiPulse.Api/Endpoints/ManagementEndpoints.cs`
+- [X] T048 [US3] Implement `IFlagRepository` (EF Core) with optimistic concurrency on `Version` in `backend/src/FlagManagement/OptiPulse.Flags.Infrastructure/FlagRepository.cs` (depends on T046, T047)
+- [X] T049 [US3] Implement `IInvalidationPublisher` (Redis Pub/Sub, publish after commit) in `backend/src/FlagManagement/OptiPulse.Flags.Infrastructure/InvalidationPublisher.cs`
+- [X] T050 [US3] Implement flag/experiment CQRS use cases (create/edit/status/version-restore, experiment CRUD) with audit writes in `backend/src/FlagManagement/OptiPulse.Flags.Application/`
+- [X] T051 [US3] Map management endpoints (flags, experiments, kill-switch, versions) with `Manager` policy (kill-switch `Admin`) in `backend/src/OptiPulse.Api/Endpoints/ManagementEndpoints.cs`
 - [ ] T052 [P] [US3] Implement `IMicroCopyGenerator` port + `MicroCopyGenerationRequest`/`Candidate` with `Draft→Approved|Rejected` state machine in `backend/src/AiGateway/{Domain,Application}/`
 - [ ] T053 [US3] Implement swappable LLM provider adapter (Polly-wrapped, degraded status) in `backend/src/AiGateway/OptiPulse.Ai.Infrastructure/ProviderAdapter.cs`
 - [ ] T054 [US3] Map AI Gateway endpoints (generate, request fetch, review) + enforce approved-only attach in management, with audit writes, in `backend/src/OptiPulse.Api/Endpoints/AiGatewayEndpoints.cs`

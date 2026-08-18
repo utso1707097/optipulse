@@ -32,6 +32,57 @@
         ],
         "type": "object"
       },
+      "ChangeStatusRequest": {
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "CreateFlagRequest": {
+        "properties": {
+          "defaultOutcome": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rollout": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RolloutDto"
+              }
+            ]
+          },
+          "targetingRules": {
+            "items": {
+              "$ref": "#/components/schemas/TargetingRuleDto"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "defaultOutcome",
+          "targetingRules",
+          "rollout"
+        ],
+        "type": "object"
+      },
       "EvaluateRequest": {
         "properties": {
           "attributes": {
@@ -60,6 +111,17 @@
         ],
         "type": "object"
       },
+      "KillSwitchRequest": {
+        "properties": {
+          "engaged": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "engaged"
+        ],
+        "type": "object"
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -83,6 +145,88 @@
         },
         "required": [
           "refreshToken"
+        ],
+        "type": "object"
+      },
+      "RolloutDto": {
+        "properties": {
+          "percentage": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "salt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "percentage",
+          "salt"
+        ],
+        "type": "object"
+      },
+      "TargetingRuleDto": {
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "operator": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "boolean"
+          },
+          "values": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "attribute",
+          "operator",
+          "values",
+          "outcome"
+        ],
+        "type": "object"
+      },
+      "UpdateFlagRequest": {
+        "properties": {
+          "defaultOutcome": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rollout": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RolloutDto"
+              }
+            ]
+          },
+          "targetingRules": {
+            "items": {
+              "$ref": "#/components/schemas/TargetingRuleDto"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "defaultOutcome",
+          "targetingRules",
+          "rollout"
         ],
         "type": "object"
       }
@@ -207,6 +351,160 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/BatchEvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      }
+    },
+    "/api/v1/flags": {
+      "get": {
+        "operationId": "ListFlags",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      },
+      "post": {
+        "operationId": "CreateFlag",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFlagRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      }
+    },
+    "/api/v1/flags/{key}": {
+      "get": {
+        "operationId": "GetFlag",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      },
+      "put": {
+        "operationId": "UpdateFlag",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFlagRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      }
+    },
+    "/api/v1/flags/{key}/kill-switch": {
+      "post": {
+        "operationId": "SetKillSwitch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KillSwitchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      }
+    },
+    "/api/v1/flags/{key}/status": {
+      "post": {
+        "operationId": "ChangeFlagStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeStatusRequest"
               }
             }
           },

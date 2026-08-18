@@ -3,10 +3,12 @@ using OptiPulse.SharedKernel;
 namespace OptiPulse.Flags.Domain;
 
 /// <summary>
-/// Flag aggregate root (data-model.md). NOTE: this MVP slice models the aggregate
-/// and its persistence shape so the Evaluation Engine can bootstrap from real
-/// data; the authoring/write API (create/edit/kill-switch endpoints) is Phase 5
-/// (US3) and not implemented here.
+/// Flag aggregate root (data-model.md).
+///
+/// Every state change bumps <see cref="Version"/>, which serves three jobs at once: EF's
+/// optimistic-concurrency token (FR-011, so a concurrent edit 409s instead of silently
+/// overwriting), the ordering key the evaluation snapshot uses to reject stale invalidation
+/// deltas, and the identifier for recoverable history (FR-010).
 /// </summary>
 public sealed class Flag
 {
@@ -93,6 +95,49 @@ public sealed class Flag
         Rollout? rollout, DateTimeOffset createdAt, DateTimeOffset updatedAt) =>
         new(id, key, name, defaultOutcome, status, killSwitchEngaged, version,
             targetingRules, rollout, createdAt, updatedAt);
+
+    /// <summary>
+    /// Edits the configurable fields. Archived flags are frozen — an edit to something no
+    /// longer served would be silently meaningless, so it is refused rather than accepted.
+    /// </summary>
+    public Result Update(
+        string name,
+        bool defaultOutcome,
+        List<TargetingRule> targetingRules,
+        Rollout? rollout,
+        DateTimeOffset now)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return Error.Validation("Flag.Name.Required", "Flag name is required.");
+        if (Status == FlagStatus.Archived)
+            return Error.Conflict("Flag.Update.Archived", "An archived flag cannot be edited.");
+
+        Name = name;
+        DefaultOutcome = defaultOutcome;
+        TargetingRules = targetingRules;
+        Rollout = rollout;
+        Version++;
+        UpdatedAt = now;
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Archive is terminal: Draft→Active→Archived, never back. Reviving a flag by key would
+    /// let an old key silently acquire new meaning while consumers still reference it.
+    /// </summary>
+    public Result Archive(DateTimeOffset now)
+    {
+        if (Status == FlagStatus.Archived)
+            return Error.Conflict("Flag.Archive.InvalidState", "Flag is already archived.");
+
+        Status = FlagStatus.Archived;
+        // An archived flag must not stay kill-switched: the kill-switch is an operational
+        // override on a live flag, and leaving it engaged on a dead one is misleading state.
+        KillSwitchEngaged = false;
+        Version++;
+        UpdatedAt = now;
+        return Result.Success();
+    }
 
     public Result Activate(DateTimeOffset now)
     {
