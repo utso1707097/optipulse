@@ -1,13 +1,76 @@
 # Deploying OptiPulse
 
-Every environment variable below was read out of the source, not from memory. If a name here
-doesn't match the code, the code wins — please open an issue.
+**Start here: the one-click path.** About five minutes, and you type five values. The manual
+walkthrough further down is for when you want control over each piece.
 
-**You perform every step in this guide.** Nothing here should be delegated to an assistant or
-pasted into a chat window: each step involves either a credential or an authorization against
-your own accounts.
+Every environment variable in this document was read out of the source, not from memory.
+
+**You perform these steps.** Each involves a credential or an authorization against your own
+accounts — none of it should be delegated to an assistant or pasted into a chat window.
 
 ---
+
+## Quick path — Render Blueprint (~5 minutes)
+
+`render.yaml` declares the API, PostgreSQL and Redis together. Render creates all three and
+**injects the connection strings itself**, so there is nothing to copy between dashboards. The
+API accepts the `postgres://` and `redis://` URLs Render injects natively, which is what makes
+that possible.
+
+1. Sign in at **render.com** with GitHub.
+2. **New → Blueprint** → pick this repository. Render reads `render.yaml`.
+3. It prompts for exactly five values:
+
+   | Prompt | What to enter |
+   |---|---|
+   | `Bootstrap__Manager__Email` | an email you control |
+   | `Bootstrap__Manager__Password` | a strong password |
+   | `Bootstrap__Admin__Email` | an email you control |
+   | `Bootstrap__Admin__Password` | a different strong password |
+   | `Cors__AllowedOrigins__0` | your dashboard URL — put a placeholder now, correct it after step 6 |
+
+4. **Apply.** The first build takes about five minutes.
+
+5. Check it:
+
+   ```bash
+   curl https://YOUR-API.onrender.com/health/ready
+   # {"status":"ready","database":"up","snapshotVersion":0}
+   ```
+
+6. **Copy the SDK key from the logs.** Printed exactly once:
+
+   ```
+   Bootstrap service-account key (shown once, not recoverable): opk_...
+   ```
+
+   Only its hash is stored, so it cannot be recovered — the same property that makes a database
+   leak useless to an attacker. Lose it and you issue a new service account.
+
+7. Dashboard on Vercel: import the repo, root directory `web/optipulse_dashboard`, framework
+   Vite, `VITE_API_URL` = your Render URL. Then correct `Cors__AllowedOrigins__0` in Render to
+   the URL Vercel gives you.
+
+**What you did not have to do:** create a Neon account, create an Upstash account, copy a
+connection string, or generate a signing key. Render provisions Postgres and Redis, injects their
+URLs, and generates the JWT signing key itself.
+
+### The trade-off you are accepting
+
+Render's **free PostgreSQL has historically been removed after a trial window**, which would take
+the audit trail and every flag with it. Fine for a portfolio demo; not fine for anything you want
+to keep.
+
+To avoid it: delete the `databases:` block from `render.yaml` and point the three
+`ConnectionStrings__*` variables at a Neon database. The API accepts Neon's `postgresql://` URL
+as-is.
+
+---
+
+## Manual path — full control
+
+Use this if you want the data somewhere durable from the start, or you are deploying somewhere
+other than Render.
 
 ## What you are deploying, and why it constrains the choice
 

@@ -31,7 +31,7 @@ public static class RedisConnectionExtensions
         {
             var options = sp.GetRequiredService<RedisOptions>();
 
-            var configuration = ConfigurationOptions.Parse(options.ConnectionString);
+            var configuration = ConfigurationOptions.Parse(NormalizeRedisUrl(options.ConnectionString));
 
             // Principle IV (fail-safe): an unreachable Redis must NOT stop the API
             // from starting. Redis carries invalidation messages, not the flag data
@@ -47,5 +47,32 @@ public static class RedisConnectionExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Managed providers hand out `redis://` / `rediss://` URLs, which
+    /// StackExchange.Redis cannot parse. Converting here means a platform-injected value works
+    /// without the operator having to know the difference. Non-URL values pass through.
+    /// </summary>
+    private static string NormalizeRedisUrl(string connectionString)
+    {
+        if (!connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) &&
+            !connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
+            return connectionString;
+
+        if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
+            return connectionString;
+
+        var userInfo = uri.UserInfo.Split(':', 2);
+        var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
+        var port = uri.Port > 0 ? uri.Port : 6379;
+
+        var result = $"{uri.Host}:{port}";
+        if (!string.IsNullOrEmpty(password))
+            result += $",password={password}";
+        if (uri.Scheme.Equals("rediss", StringComparison.OrdinalIgnoreCase))
+            result += ",ssl=True";
+
+        return result;
     }
 }

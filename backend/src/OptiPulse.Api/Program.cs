@@ -181,7 +181,10 @@ static void ConfigureProvider(DbContextOptionsBuilder options, string provider, 
     // and someone owes a new one. Silencing it would hide exactly that.
     if (string.Equals(provider, "Postgres", StringComparison.OrdinalIgnoreCase))
     {
-        options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
+        // Accepts either a platform-injected postgres:// URL or a native key-value string.
+        options.UseNpgsql(
+            ConnectionStringNormalizer.Postgres(connectionString),
+            npgsql => npgsql.EnableRetryOnFailure());
     }
     else
     {
