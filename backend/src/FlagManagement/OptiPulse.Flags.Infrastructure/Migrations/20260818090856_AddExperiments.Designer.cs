@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OptiPulse.Flags.Infrastructure;
@@ -11,9 +12,11 @@ using OptiPulse.Flags.Infrastructure;
 namespace OptiPulse.Flags.Infrastructure.Migrations
 {
     [DbContext(typeof(FlagsDbContext))]
-    partial class FlagsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260818090856_AddExperiments")]
+    partial class AddExperiments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -27,6 +27,7 @@ public sealed class FlagAuditWriter(IAuditLog auditLog) : IFlagAuditWriter
         FlagAuditAction.Updated => AuditChangeType.FlagUpdated,
         FlagAuditAction.KillSwitchEngaged => AuditChangeType.KillSwitchEngaged,
         FlagAuditAction.KillSwitchReleased => AuditChangeType.KillSwitchReleased,
+        FlagAuditAction.ExperimentChanged => AuditChangeType.ExperimentChanged,
         _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unmapped flag audit action."),
     };
 }

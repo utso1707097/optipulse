@@ -86,6 +86,8 @@ try
     builder.Services.AddScoped<IInvalidationPublisher, InvalidationPublisher>();
     builder.Services.AddScoped<IFlagAuditWriter, OptiPulse.Api.Adapters.FlagAuditWriter>();
     builder.Services.AddScoped<FlagManagementService>();
+    builder.Services.AddScoped<IExperimentRepository, ExperimentRepository>();
+    builder.Services.AddScoped<ExperimentService>();
     builder.Services.AddSingleton(sp => new FlagInvalidationOptions
     {
         // Publisher and subscriber must agree on the channel or invalidation silently no-ops.
@@ -136,6 +138,8 @@ try
     app.MapAuthEndpoints(versionSet);
     app.MapEvaluationEndpoints(versionSet);
     app.MapManagementEndpoints(versionSet);
+    app.MapExperimentEndpoints(versionSet);
+    app.MapTelemetryEndpoints(versionSet);
 
     await BootstrapAsync(app);
 

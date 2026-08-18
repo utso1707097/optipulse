@@ -43,6 +43,35 @@
         ],
         "type": "object"
       },
+      "CreateExperimentRequest": {
+        "properties": {
+          "conversionGoal": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "flagKey": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/VariantDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "flagKey",
+          "name",
+          "variants",
+          "conversionGoal"
+        ],
+        "type": "object"
+      },
       "CreateFlagRequest": {
         "properties": {
           "defaultOutcome": {
@@ -194,6 +223,20 @@
         ],
         "type": "object"
       },
+      "UpdateExperimentRequest": {
+        "properties": {
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/VariantDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "variants"
+        ],
+        "type": "object"
+      },
       "UpdateFlagRequest": {
         "properties": {
           "defaultOutcome": {
@@ -227,6 +270,26 @@
           "defaultOutcome",
           "targetingRules",
           "rollout"
+        ],
+        "type": "object"
+      },
+      "VariantDto": {
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "weight": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "weight"
         ],
         "type": "object"
       }
@@ -351,6 +414,139 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/BatchEvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      }
+    },
+    "/api/v1/experiments": {
+      "get": {
+        "operationId": "ListExperiments",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "flagKey",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      },
+      "post": {
+        "operationId": "CreateExperiment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExperimentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      }
+    },
+    "/api/v1/experiments/{id}": {
+      "get": {
+        "operationId": "GetExperiment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      },
+      "put": {
+        "operationId": "UpdateExperiment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExperimentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      }
+    },
+    "/api/v1/experiments/{id}/status": {
+      "post": {
+        "operationId": "ChangeExperimentStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeStatusRequest"
               }
             }
           },
@@ -523,6 +719,29 @@
     "/api/v1/snapshot/version": {
       "get": {
         "operationId": "GetSnapshotVersion",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "OptiPulse.Api"
+        ]
+      }
+    },
+    "/api/v1/telemetry/flags/{key}/exposures": {
+      "get": {
+        "operationId": "GetFlagExposures",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"

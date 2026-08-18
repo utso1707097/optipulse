@@ -1,12 +1,22 @@
 namespace OptiPulse.Audit.Application;
 
 /// <summary>
-/// Reads aggregated exposure counts (FR-020, SC-008). This MVP slice provides a
-/// simple per-flag count sufficient to validate that evaluations reconcile with
-/// recorded exposures; full variant-grouped windowed aggregation (VariantExposureCount)
-/// is a Phase 5 (US3) concern once Experiments/Variants exist.
+/// Reads aggregated exposure counts (FR-020, SC-008).
 /// </summary>
 public interface IExposureAggregator
 {
     Task<long> GetExposureCountAsync(string flagKey, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Per-variant exposure counts for a flag — the shape the analytics view needs to compare
+    /// arms of an experiment (T055). Counts are of EXPOSURES, i.e. how many times each variant
+    /// was actually served, not how many contexts were eligible; those differ whenever a flag
+    /// is evaluated more than once per context, and conflating them would inflate the
+    /// denominator of any conversion rate computed from it.
+    /// </summary>
+    Task<IReadOnlyList<VariantExposureCount>> GetVariantExposureCountsAsync(
+        string flagKey, CancellationToken cancellationToken = default);
 }
+
+/// <param name="VariantKey">Null for flag-level exposures recorded outside an experiment.</param>
+public sealed record VariantExposureCount(string? VariantKey, long Exposures);
