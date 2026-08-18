@@ -73,7 +73,7 @@ public sealed class EvaluationApiTests(OptiPulseTestFixture fixture)
         flag.Activate(DateTimeOffset.UtcNow);
         await SeedAndPublishFlagAsync(flag);
 
-        var client = fixture.CreateClient();
+        var client = fixture.CreateServiceAccountClient(await fixture.CreateServiceAccountKeyAsync());
         await WaitUntilFlagIsKnownAsync(client, flag.Key, TimeSpan.FromSeconds(10));
 
         int enabledCount = 0;
@@ -111,7 +111,7 @@ public sealed class EvaluationApiTests(OptiPulseTestFixture fixture)
         flag.Activate(DateTimeOffset.UtcNow);
         await SeedAndPublishFlagAsync(flag);
 
-        var client = fixture.CreateClient();
+        var client = fixture.CreateServiceAccountClient(await fixture.CreateServiceAccountKeyAsync());
         await WaitUntilFlagIsKnownAsync(client, flag.Key, TimeSpan.FromSeconds(10));
 
         var usResponse = await client.PostAsJsonAsync("/api/v1/evaluate",
@@ -131,7 +131,7 @@ public sealed class EvaluationApiTests(OptiPulseTestFixture fixture)
     [Fact]
     public async Task Evaluate_UnknownFlag_ReturnsSafeDefault_Never404Or500()
     {
-        var client = fixture.CreateClient();
+        var client = fixture.CreateServiceAccountClient(await fixture.CreateServiceAccountKeyAsync());
 
         var response = await client.PostAsJsonAsync("/api/v1/evaluate",
             new EvaluateRequest($"does-not-exist-{Guid.NewGuid():N}", "user-1", null));
@@ -145,7 +145,7 @@ public sealed class EvaluationApiTests(OptiPulseTestFixture fixture)
     [Fact]
     public async Task GetSnapshotVersion_ReturnsCurrentVersionAndBuiltAt()
     {
-        var client = fixture.CreateClient();
+        var client = fixture.CreateServiceAccountClient(await fixture.CreateServiceAccountKeyAsync());
 
         var response = await client.GetAsync("/api/v1/snapshot/version");
 
@@ -157,7 +157,7 @@ public sealed class EvaluationApiTests(OptiPulseTestFixture fixture)
     [Fact]
     public async Task EvaluateBatch_MultipleFlagKeys_ReturnsOneResultPerKey()
     {
-        var client = fixture.CreateClient();
+        var client = fixture.CreateServiceAccountClient(await fixture.CreateServiceAccountKeyAsync());
         var keys = new[] { "unknown-a", "unknown-b", "unknown-c" };
 
         var response = await client.PostAsJsonAsync("/api/v1/evaluate/batch",

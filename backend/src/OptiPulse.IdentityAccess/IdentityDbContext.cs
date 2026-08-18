@@ -9,6 +9,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<ServiceAccount> ServiceAccounts => Set<ServiceAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +29,17 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             builder.HasKey(t => t.Id);
             builder.HasIndex(t => t.TokenHash).IsUnique();
             builder.HasIndex(t => t.FamilyId);
+        });
+
+        modelBuilder.Entity<ServiceAccount>(builder =>
+        {
+            builder.ToTable("ServiceAccounts");
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.Name).IsRequired().HasMaxLength(200);
+            builder.Property(a => a.KeyHash).IsRequired().HasMaxLength(64);
+            // Unique: the hash is the lookup key for authentication, so a duplicate would make
+            // one credential resolve to two accounts.
+            builder.HasIndex(a => a.KeyHash).IsUnique();
         });
     }
 }

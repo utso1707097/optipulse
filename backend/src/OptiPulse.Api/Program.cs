@@ -12,6 +12,7 @@ using OptiPulse.Evaluation.Infrastructure;
 using OptiPulse.Flags.Application;
 using OptiPulse.Flags.Infrastructure;
 using OptiPulse.IdentityAccess;
+using OptiPulse.Resilience;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;

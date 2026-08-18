@@ -2,6 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OptiPulse.Evaluation.Application;
+using OptiPulse.Resilience;
+using Polly.CircuitBreaker;
+using Polly.Registry;
+using Polly.Timeout;
 using StackExchange.Redis;
 
 namespace OptiPulse.Evaluation.Infrastructure;
@@ -19,6 +23,7 @@ public sealed class InvalidationSubscriber(
     ISnapshotWriter snapshotWriter,
     IServiceScopeFactory scopeFactory,
     RedisOptions redisOptions,
+    ResiliencePipelineProvider<string> pipelineProvider,
     ILogger<InvalidationSubscriber> logger) : BackgroundService
 {
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
@@ -35,20 +40,33 @@ public sealed class InvalidationSubscriber(
         // keeps serving last-known-good evaluations and picks invalidation back up
         // when Redis returns. Once subscribed, StackExchange.Redis restores the
         // subscription itself across later reconnects, so this loop exits.
+        // The subscribe call is an outbound Redis dependency call, so it carries the named
+        // "redis" pipeline (Principle IV): timeout + jittered retry + circuit breaker per
+        // attempt. The outer loop is still needed and is not redundant with it — the pipeline
+        // bounds a single attempt, while the loop expresses "keep trying for as long as the
+        // service runs", which no retry budget should encode. This is subscription setup, not
+        // the evaluation hot path, so the indirection is allowed.
+        var pipeline = pipelineProvider.GetPipeline(ResilienceExtensions.RedisPipeline);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await redis.GetSubscriber().SubscribeAsync(channel, async (_, message) =>
-                {
-                    await HandleMessageAsync(message, stoppingToken);
-                });
+                await pipeline.ExecuteAsync(
+                    async _ => await redis.GetSubscriber().SubscribeAsync(channel, async (_, message) =>
+                    {
+                        await HandleMessageAsync(message, stoppingToken);
+                    }),
+                    stoppingToken);
 
                 logger.LogInformation(
                     "Subscribed to invalidation channel {Channel}", redisOptions.InvalidationChannel);
                 break;
             }
-            catch (RedisException ex)
+            // Specific types, not a broad catch (constitution error-handling rule): the Redis
+            // client's own failures plus the two the pipeline itself raises when it gives up.
+            catch (Exception ex) when (
+                ex is RedisException or BrokenCircuitException or TimeoutRejectedException)
             {
                 logger.LogWarning(
                     ex,

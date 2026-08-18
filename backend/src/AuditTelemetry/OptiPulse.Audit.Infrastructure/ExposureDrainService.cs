@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OptiPulse.Audit.Domain;
+using OptiPulse.Resilience;
+using Polly.Registry;
 
 namespace OptiPulse.Audit.Infrastructure;
 
@@ -12,6 +14,7 @@ namespace OptiPulse.Audit.Infrastructure;
 public sealed class ExposureDrainService(
     ExposureWriter writer,
     IServiceScopeFactory scopeFactory,
+    ResiliencePipelineProvider<string> pipelineProvider,
     ILogger<ExposureDrainService> logger) : BackgroundService
 {
     private const int BatchSize = 200;
@@ -51,7 +54,15 @@ public sealed class ExposureDrainService(
                 using var scope = scopeFactory.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<AuditDbContext>();
                 await dbContext.ExposureEvents.AddRangeAsync(batch, stoppingToken);
-                await dbContext.SaveChangesAsync(stoppingToken);
+
+                // Principle IV: the batch flush is an outbound persistence call, so it carries
+                // the "postgres" pipeline (timeout + jittered retry + circuit breaker). Safe to
+                // retry here precisely because this runs OFF the hot path — evaluation already
+                // returned, so a retry costs latency no caller is waiting on. A dropped batch
+                // would show up as an SC-008 reconciliation gap.
+                var pipeline = pipelineProvider.GetPipeline(ResilienceExtensions.PostgresPipeline);
+                await pipeline.ExecuteAsync(
+                    async token => await dbContext.SaveChangesAsync(token), stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

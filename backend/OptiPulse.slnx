@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/OptiPulse.Api/OptiPulse.Api.csproj" />
     <Project Path="src/OptiPulse.IdentityAccess/OptiPulse.IdentityAccess.csproj" />
+    <Project Path="src/OptiPulse.Resilience/OptiPulse.Resilience.csproj" />
     <Project Path="src/OptiPulse.SharedKernel/OptiPulse.SharedKernel.csproj" />
   </Folder>
   <Folder Name="/src/AiGateway/">
