@@ -8,7 +8,10 @@ this file only adds frontend-specific operating detail on top of it.
 
 - **Custom hooks + a single `AuthContext`** is the entire state model. `src/context/AuthContext.tsx`
   is the only cross-cutting global state in this app.
-- **Do NOT add Redux, MobX, Zustand, or React Query/TanStack Query.** `.kits/claude-code-best-practices`
+- **State: Redux Toolkit** (constitution v2.4.0). Use RTK slices, not hand-written reducers. Do NOT add MobX, Zustand, or React Query/TanStack Query alongside it — one state library is enough.
+- **Styling: Tailwind CSS** (v2.4.0). Utility classes in components are expected.
+- **Server state stays authoritative in the backend.** A slice may hold fetched data for rendering; it must not become a second source of truth reconciled against the API.
+- Superseded guidance below (kept for context): `.kits/claude-code-best-practices`
   (git-ignored, local reference only) ships React example docs that recommend Zustand and React
   Query — that guidance is explicitly **not followed** here; it conflicts with the constitution.
 - Server data fetching goes through the hooks in `src/hooks/` (`useFlags`, `useExperiments`,
@@ -31,7 +34,7 @@ than stale editable data (spec FR-029).
 - `.claude/hooks/format-on-write.sh` runs `prettier` automatically on every write.
 - `.claude/hooks/block-secrets.sh` blocks committing hardcoded secrets/tokens.
 - Adopted from `.kits/claude-code-best-practices`: the `component-new` / `test-component` skill
-  patterns are usable as references, adapted to this app's conventions (custom hooks, no Redux).
+  patterns are usable as references, adapted to this app's conventions (Redux Toolkit + Tailwind).
 
 ## Commands
 

@@ -18,7 +18,7 @@ Two purpose-built, differentiated clients (constitution Principle V) consume the
 
 - **Web Dashboard (React)** — an always-online, lightweight console for Product & Marketing
   managers: flag creation, experiment management, micro-copy generation/approval, analytics.
-  Simplified React with standard custom hooks and lightweight state — **no Redux/MobX/Zustand**.
+  Client state via **Redux Toolkit** (constitution v2.4.0), styled with **Tailwind CSS**.
 - **Mobile App (Flutter)** — an offline-first app for Admin & DevOps engineers: real-time
   telemetry, push notifications on critical events, and instant kill-switch. Clean Architecture,
   BLoC/Cubit, HydratedBloc, Dio. **iOS/Android only — no Flutter Web.**
@@ -39,7 +39,7 @@ Flutter 3.x (mobile)
   ASP.NET Core JWT bearer auth + authorization policies, EF Core 10, StackExchange.Redis,
   Polly v8, source-generated System.Text.Json, BenchmarkDotNet
 - Web: React + Vite + TypeScript, custom hooks + React Context (auth/session only), generated typed
-  API client; **no Redux/MobX/Zustand**
+  API client; **Redux Toolkit** for client state, **Tailwind CSS** for styling (v2.4.0)
 - Mobile: flutter_bloc, hydrated_bloc, dio, get_it/injectable, a push-notification plugin behind an
   abstraction
 - Contract tooling: OpenAPI generators — TypeScript (`openapi-typescript`/Kiota) and Dart
@@ -91,7 +91,7 @@ four bounded contexts + Identity & Access; two clients
 | II. Zero-Allocation Performance (NON-NEGOTIABLE) | <5ms eval, MurmurHash3, zero-alloc, benchmark-gated | Lock-free immutable snapshot, MurmurHash3 over spans; BenchmarkDotNet gate asserts 0 B + sub-5ms. **PASS** |
 | III. .NET 10 Modern Standards (NON-NEGOTIABLE) | .NET 10, AOT-clean hot path, modern C#, warnings=errors | Nullable, source-gen JSON, no dynamic on hot path; AOT/trim analyzers enabled as **errors** on `OptiPulse.Evaluation.*`. `PublishAot` deliberately **NOT** set on the API host — per constitution v2.2.0 it is not publish-only and makes EF Core refuse model building, preventing startup; whole-host AOT publish is gated on T085 (compiled models + migrations off the startup path). **PASS at the scoped guarantee** |
 | IV. Resilience & Fail-Safe Kill-Switch | Polly on management/persistence/provider paths; hot path exempt; <100ms Redis Pub/Sub; fail-safe last-known-good | Polly v8 pipelines on Postgres/Redis/AI/push, each wired to a real call site (an unused pipeline is a v2.2.0 violation — see T012a); evaluation hot path exempt by design and resilient structurally; startup does not depend on Redis; kill-switch precedence over Pub/Sub; last-known-good snapshot. **PARTIAL — T012a outstanding** |
-| V. Dual-Client Strategy | React always-online + lightweight; Flutter offline-first Clean Arch; no client auth logic | React (custom hooks, no Redux, always-online) + Flutter (BLoC/HydratedBloc, offline-first, iOS/Android only); both consume governed contract; neither holds auth logic. **PASS** |
+| V. Dual-Client Strategy | React always-online + lightweight; Flutter offline-first Clean Arch; no client auth logic | React (Redux Toolkit + Tailwind, always-online — v2.4.0) + Flutter (BLoC/HydratedBloc, offline-first, iOS/Android only); both consume governed contract; neither holds auth logic; server state stays authoritative in the backend. **PASS** |
 | VI. Backend-Contained Auth | Custom JWT/RBAC server-side; opaque tokens; no client secrets | JWT issuance/validation + authorization policies in backend; rotating refresh tokens; roles Manager/Admin; clients opaque. **PASS** |
 | VII. Contract-First API Security | Native OpenAPI authoritative; CI fails on drift across clients | `Microsoft.AspNetCore.OpenApi` emits spec; TS + Dart generated from it; CI regenerate-and-diff gate. **PASS** |
 
@@ -169,7 +169,7 @@ contexts each with Domain/Application/Infrastructure, plus a supporting `OptiPul
 project owning the custom JWT/RBAC concern (kept out of the four product contexts but reused by the
 Api host, satisfying Principle VI). The **React** dashboard (`web/`) is deliberately lightweight —
 custom hooks over a generated typed client, with `AuthContext` as the only cross-cutting state and
-no Redux (Principle V). The **Flutter** app (`mobile/`) is offline-first, iOS/Android only, feature-
+Redux Toolkit (Principle V, v2.4.0). The **Flutter** app (`mobile/`) is offline-first, iOS/Android only, feature-
 first Clean Architecture. A `contracts-gen/` workspace holds the OpenAPI generator configuration and
 the CI drift gate that keeps both clients in lockstep with the backend (Principle VII).
 

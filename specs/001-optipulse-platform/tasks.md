@@ -59,14 +59,14 @@ gaps found in work already built.
 - [X] T003 [P] Enable `<Nullable>enable</Nullable>`, `<PublishAot>true</PublishAot>`, and `-warnaserror` (incl. AOT/trim analyzers) in `backend/Directory.Build.props`
 - [X] T003a [P] Enable central package management: create `backend/Directory.Packages.props` with `<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>` and pin the baseline packages (Polly via `Microsoft.Extensions.Http.Resilience`, EF Core 10 + Npgsql, StackExchange.Redis, Serilog + OpenTelemetry, `Asp.Versioning`, xUnit, Testcontainers) — no hardcoded versions in `.csproj` (constitution package baseline)
 - [X] T003b Add the two baseline packages T003a claimed but never pinned (verified absent: no `Asp.Versioning` reference anywhere; `xunit` is 2.9.3). Add `Asp.Versioning.Http` to `backend/Directory.Packages.props` and adopt it in `OptiPulse.Api` **now, while only 7 endpoints exist** — Phase 5 adds ~15 more and retrofitting versioning across the larger surface is materially more expensive (constitution v2.2.0 package baseline). The xUnit v3 pin was corrected to v2 in the constitution instead of migrating, so no test-framework change is required
-- [X] T004 [P] Scaffold React app `web/optipulse_dashboard/` with Vite + TypeScript; add Vitest + Testing Library; configure ESLint/Prettier (no Redux/MobX/Zustand deps)
+- [X] T004 [P] Scaffold React app `web/optipulse_dashboard/` with Vite + TypeScript; add Vitest + Testing Library; configure ESLint/Prettier — state pin later revised to Redux Toolkit + Tailwind (constitution v2.4.0)
 - [X] T005 [P] Scaffold Flutter app `mobile/optipulse_app/` (iOS + Android targets only) with flutter_bloc, hydrated_bloc, dio, get_it/injectable
 - [X] T006 [P] Configure backend test projects `backend/tests/OptiPulse.UnitTests`, `OptiPulse.IntegrationTests` (xUnit + FluentAssertions + Testcontainers), `OptiPulse.Evaluation.Benchmarks` (BenchmarkDotNet)
 - [X] T007 [P] Add `contracts-gen/generate.sh` skeleton (export OpenAPI → TS + Dart) and README per [contracts/openapi-pipeline.md](contracts/openapi-pipeline.md)
 - [X] T008 [P] Add CI workflow skeleton running `dotnet build -warnaserror`, `dotnet test`, benchmark gate, and the OpenAPI drift check in `.github/workflows/ci.yml`
 - [X] T008e [P] Wire the anti-pattern gate into CI/pre-commit: adapt `.kits/dotnet-claude-kit/hooks/pre-commit-antipattern.sh` (flags `DateTime.Now`/`DateTime.UtcNow`, `async void`, `new HttpClient()`) into `.github/workflows/ci.yml` and/or a git pre-commit hook so violations fail the build (constitution v2.1.0 anti-pattern gate)
 - [X] T008a [P] Author backend `backend/CLAUDE.md` importing the adopted `.kits/dotnet-claude-kit` rules, pinning Clean Architecture + custom JWT/RBAC, and excluding Mediator/HybridCache from the evaluation hot path (per constitution v2.1.0 baselines)
-- [X] T008b [P] Author `web/optipulse_dashboard/CLAUDE.md` — custom hooks + single AuthContext, **no Redux/MobX/Zustand/React Query**, OpenAPI-generated typed client (overrides the web kit's Zustand/React-Query guidance)
+- [X] T008b [P] Author `web/optipulse_dashboard/CLAUDE.md` — OpenAPI-generated typed client; state guidance revised to **Redux Toolkit + Tailwind CSS** per constitution v2.4.0 (the original no-Redux pin was relaxed by the maintainer before any dashboard code existed)
 - [X] T008c [P] Author `mobile/optipulse_app/CLAUDE.md` importing the adopted `.kits/flutter-ai-rules` skills, pinning **BLoC/Cubit + HydratedBloc + Dio** and disabling Riverpod/Provider/ChangeNotifier for app state
 - [X] T008d Verify dev tooling is active: `.claude/hooks/` (format-on-write, block-secrets, bash-guard) and the `cwm-roslyn-navigator` MCP resolve `backend/OptiPulse.sln`
 
@@ -201,14 +201,16 @@ second client land.
 ### Implementation for User Story 3 — React Web Dashboard
 
 - [ ] T056 [US3] Generate TypeScript types + typed client from `openapi.json` into `web/optipulse_dashboard/src/api/` (via `contracts-gen/generate.sh`)
-- [ ] T057 [P] [US3] Implement `AuthContext` (opaque session, silent refresh) in `web/optipulse_dashboard/src/context/AuthContext.tsx`
-- [ ] T058 [P] [US3] Implement custom hooks `useFlags`, `useExperiments`, `useMicroCopy`, `useAnalytics` over the generated client in `web/optipulse_dashboard/src/hooks/`
-- [ ] T059 [US3] Build Flags + Experiments management screens in `web/optipulse_dashboard/src/features/{flags,experiments}/` (depends on T056–T058)
+- [ ] T057 [P] [US3] Implement the auth slice (opaque session, silent refresh) with Redux Toolkit in `web/optipulse_dashboard/src/store/authSlice.ts` — constitution v2.4.0 replaced the AuthContext pin with Redux Toolkit. The token stays opaque to the client and no authorization decision is made here (Principle VI)
+- [ ] T058 [P] [US3] Implement `flags`, `experiments` and `analytics` slices + typed hooks over the generated client in `web/optipulse_dashboard/src/store/` and `src/hooks/`. Slices hold fetched data for rendering only — the backend stays the source of truth and is re-read rather than reconciled against (constitution v2.4.0)
+- [ ] T059 [US3] Build Flags + Experiments management screens with **Tailwind CSS** in `web/optipulse_dashboard/src/features/{flags,experiments}/` (depends on T056–T058)
 - [ ] T060 [US3] Build Micro-Copy generation/approval screen in `web/optipulse_dashboard/src/features/microcopy/`
 - [ ] T061 [US3] Build Analytics review screen in `web/optipulse_dashboard/src/features/analytics/`
 - [ ] T062 [US3] Implement always-online guard (clear "requires connectivity" state, no stale editable state) in `web/optipulse_dashboard/src/components/ConnectivityGuard.tsx`
 
-**Checkpoint**: Managers can run the full authoring→experiment→copy→analytics loop on the web dashboard.
+- [ ] T056a [P] [US3] Install and configure **Tailwind CSS** + **Redux Toolkit** in `web/optipulse_dashboard/` (constitution v2.4.0), including the store wiring in `src/main.tsx`
+
+**Checkpoint**: Managers can run the full authoring→experiment→analytics loop on the web dashboard. (Micro-copy is deferred with the AI Gateway.)
 
 ---
 
