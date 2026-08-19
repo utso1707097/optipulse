@@ -2,11 +2,11 @@
 
 Two kinds of file live here, and the difference matters:
 
-| File | Origin | Editable? |
-| --- | --- | --- |
+| File          | Origin                                                                     | Editable?                                                                                                                            |
+| ------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `schema.d.ts` | **Generated** by `contracts-gen/generate.sh` (pinned `openapi-typescript`) | No — and Prettier is barred from it in `.prettierignore`, because a reformat is indistinguishable from contract drift to the CI gate |
-| `client.ts` | Hand-written | Yes |
-| `config.ts` | Hand-written | Yes |
+| `client.ts`   | Hand-written                                                               | Yes                                                                                                                                  |
+| `config.ts`   | Hand-written                                                               | Yes                                                                                                                                  |
 
 `client.ts` derives every request and response type from `schema.d.ts` rather than declaring its
 own, so a backend contract change surfaces as a TypeScript error here instead of a runtime
