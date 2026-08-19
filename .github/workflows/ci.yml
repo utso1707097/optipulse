@@ -186,6 +186,11 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          # PINNED, not "stable". The floating channel resolved a Dart older than
+          # injectable_generator and build_runner require, so a version that built
+          # locally could fail here — or worse, resolve different package versions on
+          # each run. 3.44.2 ships Dart 3.12.2, the floor declared in pubspec.yaml.
+          flutter-version: "3.44.2"
           channel: "stable"
 
       - name: Install dependencies
