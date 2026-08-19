@@ -11,11 +11,15 @@ namespace OptiPulse.Flags.Application;
 ///   2. commit — a concurrency conflict returns a Result, never a silent overwrite
 ///   3. audit the change (FR-A06: attributed to the acting user and role)
 ///   4. publish invalidation LAST, so no node is ever told about a version that failed to save
+///
+/// A kill-switch change additionally raises an operational alert, after the commit and never
+/// before: an alert about a change that then failed to save would be worse than no alert.
 /// </summary>
 public sealed class FlagManagementService(
     IFlagRepository repository,
     IInvalidationPublisher publisher,
     IFlagAuditWriter auditWriter,
+    IOperationalAlerter alerter,
     TimeProvider timeProvider)
 {
     public Task<IReadOnlyList<Flag>> ListAsync(CancellationToken ct = default) =>
@@ -156,6 +160,11 @@ public sealed class FlagManagementService(
             flag.Id, before, Describe(flag), ct);
 
         await publisher.PublishKillSwitchAsync(flag, ct);
+
+        // After the commit and after invalidation. The other Admins need to know a kill switch
+        // moved even — especially — when they were not the one who moved it.
+        await alerter.KillSwitchChangedAsync(key, engaged, actor.DisplayName, ct);
+
         return flag;
     }
 

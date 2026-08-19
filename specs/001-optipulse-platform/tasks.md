@@ -247,27 +247,27 @@ deployment an operator can log into.
 
 ### Tests for User Story 4
 
-- [ ] T063 [P] [US4] Integration test: kill-switch from Admin reflects on all nodes < 100ms in `backend/tests/OptiPulse.IntegrationTests/Management/KillSwitchPropagationTests.cs`
-- [ ] T064 [P] [US4] Contract tests for alerts (device register, history, ack) per [contracts/telemetry-audit-api.md](contracts/telemetry-audit-api.md) in `backend/tests/OptiPulse.IntegrationTests/Alerts/AlertsApiTests.cs`
-- [ ] T065 [P] [US4] Integration test: alert persisted to history even when push delivery fails in `backend/tests/OptiPulse.IntegrationTests/Alerts/AlertHistoryTests.cs`
-- [ ] T066 [P] [US4] Flutter bloc_test for kill-switch (pending→confirmed) and offline reconcile in `mobile/optipulse_app/test/`
+- [X] T063 [P] [US4] Integration test: kill-switch from Admin reflects on all nodes < 100ms in `backend/tests/OptiPulse.IntegrationTests/Management/KillSwitchPropagationTests.cs`
+- [X] T064 [P] [US4] Contract tests for alerts (device register, history, ack) per [contracts/telemetry-audit-api.md](contracts/telemetry-audit-api.md) in `backend/tests/OptiPulse.IntegrationTests/Alerts/AlertsApiTests.cs`
+- [X] T065 [P] [US4] Integration test: alert persisted to history even when push delivery fails in `backend/tests/OptiPulse.IntegrationTests/Alerts/AlertHistoryTests.cs`
+- [X] T066 [P] [US4] Flutter bloc_test for kill-switch (pending→confirmed) and offline reconcile in `mobile/optipulse_app/test/`
 
 ### Implementation for User Story 4 — Backend (Alerting + Telemetry)
 
-- [ ] T067 [P] [US4] Implement `Alert`/`CriticalEvent` + `PushDevice` entities and append-to-history store in `backend/src/AuditTelemetry/OptiPulse.Audit.{Domain,Infrastructure}/`
-- [ ] T068 [US4] Implement critical-event detection (error-rate/anomalous-exposure/kill-switch-change) in `backend/src/AuditTelemetry/OptiPulse.Audit.Application/AlertDetector.cs`
-- [ ] T069 [US4] Implement `IAlertNotifier` push adapter (FCM/APNs, Polly-wrapped) + durable-history fallback in `backend/src/AuditTelemetry/OptiPulse.Audit.Infrastructure/AlertNotifier.cs`
-- [ ] T070 [US4] Map alert endpoints (`/alerts/devices`, `/alerts`, `/alerts/{id}/ack`) with `Admin` policy in `backend/src/OptiPulse.Api/Endpoints/AlertsEndpoints.cs`
-- [ ] T071 [US4] Add live telemetry read endpoint (real-time exposures/health signals) in `backend/src/OptiPulse.Api/Endpoints/TelemetryEndpoints.cs` ⚠️ shared file with T055/T082 — do not run in parallel
+- [X] T067 [P] [US4] Implement `Alert`/`CriticalEvent` + `PushDevice` entities and append-to-history store in `backend/src/AuditTelemetry/OptiPulse.Audit.{Domain,Infrastructure}/`
+- [X] T068 [US4] Implement critical-event detection (error-rate/anomalous-exposure/kill-switch-change) in `backend/src/AuditTelemetry/OptiPulse.Audit.Application/AlertDetector.cs`
+- [X] T069 [US4] Implement `IAlertNotifier` push adapter (FCM/APNs, Polly-wrapped) + durable-history fallback in `backend/src/AuditTelemetry/OptiPulse.Audit.Infrastructure/AlertNotifier.cs`
+- [X] T070 [US4] Map alert endpoints (`/alerts/devices`, `/alerts`, `/alerts/{id}/ack`) with `Admin` policy in `backend/src/OptiPulse.Api/Endpoints/AlertsEndpoints.cs`
+- [X] T071 [US4] Add live telemetry read endpoint (real-time exposures/health signals) in `backend/src/OptiPulse.Api/Endpoints/TelemetryEndpoints.cs` ⚠️ shared file with T055/T082 — do not run in parallel
 
 ### Implementation for User Story 4 — Flutter Mobile App
 
-- [ ] T072 [US4] Generate Dart models + Dio client from `openapi.json` into `mobile/optipulse_app/lib/core/` (via `contracts-gen/generate.sh`)
-- [ ] T073 [P] [US4] Implement auth feature (login, opaque token storage, silent refresh) in `mobile/optipulse_app/lib/features/auth/`
-- [ ] T074 [P] [US4] Implement telemetry feature (live monitoring Cubit + HydratedBloc cache) in `mobile/optipulse_app/lib/features/telemetry/`
-- [ ] T075 [P] [US4] Implement alerts feature (push handler + in-app history + ack) in `mobile/optipulse_app/lib/features/alerts/`
-- [ ] T076 [US4] Implement kill-switch feature (Admin action, pending→confirmed, never silently lost) in `mobile/optipulse_app/lib/features/killswitch/` (depends on T072, T073)
-- [ ] T077 [US4] Implement deterministic offline reconcile on reconnect with kill-switch precedence in `mobile/optipulse_app/lib/core/reconcile/`
+- [X] T072 [US4] Generate Dart models + Dio client from `openapi.json` into `mobile/optipulse_app/lib/core/` (via `contracts-gen/generate.sh`)
+- [X] T073 [P] [US4] Implement auth feature (login, opaque token storage, silent refresh) in `mobile/optipulse_app/lib/features/auth/`
+- [X] T074 [P] [US4] Implement telemetry feature (live monitoring Cubit + HydratedBloc cache) in `mobile/optipulse_app/lib/features/telemetry/`
+- [X] T075 [P] [US4] Implement alerts feature (push handler + in-app history + ack) in `mobile/optipulse_app/lib/features/alerts/`
+- [X] T076 [US4] Implement kill-switch feature (Admin action, pending→confirmed, never silently lost) in `mobile/optipulse_app/lib/features/killswitch/` (depends on T072, T073)
+- [X] T077 [US4] Implement deterministic offline reconcile on reconnect with kill-switch precedence in `mobile/optipulse_app/lib/core/reconcile/`
 
 **Checkpoint**: Admins can monitor, get alerted, and kill-switch from mobile, online or intermittently connected.
 

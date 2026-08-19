@@ -61,7 +61,20 @@ try
     builder.Services.AddProblemDetails();
 
     // Native OpenAPI (Constitution Principle VII — no Swashbuckle).
-    builder.Services.AddOpenApi();
+    //
+    // Pinned to 3.0 rather than the .NET 10 default of 3.1. The two differ on how a nullable
+    // property is expressed: 3.1 emits the JSON Schema union `"type": ["null", "object"]`,
+    // which openapi-generator's Dart target cannot map — it produces an unresolvable type and
+    // built_value codegen fails outright on EvaluateRequest.attributes. 3.0's `nullable: true`
+    // is understood by every generator in this pipeline.
+    //
+    // The contract is consumed by three generators, so it is written for the narrowest of them,
+    // not the newest spec available. Revisit when openapi-generator supports 3.1 type unions.
+    builder.Services.AddOpenApi(options =>
+    {
+        options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_0;
+        options.AddSchemaTransformer<OpenApiNumericUnionTransformer>();
+    });
 
     // Both reads deferred inside the configure-lambda (not hoisted to an outer
     // variable) so they observe the SAME configuration snapshot — including any
@@ -107,6 +120,16 @@ try
     builder.Services.AddScoped<IAuditLog, AuditLog>();
     builder.Services.AddScoped<IExposureAggregator, ExposureAggregator>();
     builder.Services.AddScoped<IConversionRecorder, ConversionRecorder>();
+
+    // Alerting (T067-T070). The notifier is the LOGGING one by default: push is a delivery
+    // optimisation over a durable history that is already the source of truth, so a deployment
+    // with no Firebase project is still a complete alerting system read in-app. An FCM/APNs
+    // implementation replaces this single registration and must wrap its outbound HTTP in a
+    // Polly pipeline like every other outbound dependency.
+    builder.Services.AddScoped<IAlertStore, AlertStore>();
+    builder.Services.AddScoped<IAlertNotifier, LoggingAlertNotifier>();
+    builder.Services.AddScoped<AlertDispatcher>();
+    builder.Services.AddScoped<IOperationalAlerter, OptiPulse.Api.Adapters.OperationalAlerter>();
 
     builder.Services.AddOptiPulseRedis(builder.Configuration);
     builder.Services.AddOptiPulseResilience();
@@ -155,6 +178,7 @@ try
     app.MapManagementEndpoints(versionSet);
     app.MapExperimentEndpoints(versionSet);
     app.MapTelemetryEndpoints(versionSet);
+    app.MapAlertsEndpoints(versionSet);
 
     await BootstrapAsync(app);
     await BootstrapSeeder.SeedAsync(app);

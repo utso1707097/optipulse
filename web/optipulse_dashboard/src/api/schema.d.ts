@@ -4,6 +4,70 @@
  */
 
 export interface paths {
+    "/api/v1/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alerts/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RegisterPushDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alerts/devices/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RevokePushDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alerts/{id}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AcknowledgeAlert"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -260,42 +324,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/telemetry/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetLiveTelemetry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AlertResponse: {
+            /** Format: date-time */
+            acknowledgedAt: string | null;
+            acknowledgedBy: string | null;
+            detail: string;
+            flagKey: string | null;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: date-time */
+            raisedAt: string;
+            severity: string;
+            title: string;
+        };
         BatchEvaluateRequest: {
-            attributes: null | {
+            attributes: {
                 [key: string]: string;
-            };
-            contextKey: null | string;
+            } | null;
+            contextKey: string | null;
             flagKeys: string[];
         };
         BatchEvaluateResponse: {
             results: components["schemas"]["EvaluateResponse"][];
             /** Format: int64 */
-            snapshotVersion: number | string;
+            snapshotVersion: number;
         };
         ChangeStatusRequest: {
             status: string;
         };
         ConversionRequest: {
-            contextKey: null | string;
+            contextKey: string | null;
             /** Format: uuid */
-            experimentId: null | string;
+            experimentId: string | null;
             flagKey: string;
             goal: string;
             idempotencyKey: string;
             /** Format: double */
-            value: null | number | string;
-            variantKey: null | string;
+            value: number | null;
+            variantKey: string | null;
         };
         ConversionResponse: {
             duplicate: boolean;
             recorded: boolean;
         };
         CreateExperimentRequest: {
-            conversionGoal: null | string;
+            conversionGoal: string | null;
             flagKey: string;
             name: string;
             variants: components["schemas"]["VariantDto"][];
@@ -304,14 +398,14 @@ export interface components {
             defaultOutcome: boolean;
             key: string;
             name: string;
-            rollout: null | components["schemas"]["RolloutDto"];
-            targetingRules: null | components["schemas"]["TargetingRuleDto"][];
+            rollout: components["schemas"]["RolloutDto"] | null;
+            targetingRules: components["schemas"]["TargetingRuleDto"][] | null;
         };
         EvaluateRequest: {
-            attributes: null | {
+            attributes: {
                 [key: string]: string;
-            };
-            contextKey: null | string;
+            } | null;
+            contextKey: string | null;
             flagKey: string;
         };
         EvaluateResponse: {
@@ -319,11 +413,11 @@ export interface components {
             outcome: boolean;
             reason: string;
             /** Format: int64 */
-            snapshotVersion: number | string;
-            variantKey: null | string;
+            snapshotVersion: number;
+            variantKey: string | null;
         };
         ExperimentResponse: {
-            conversionGoal: null | string;
+            conversionGoal: string | null;
             /** Format: date-time */
             createdAt: string;
             flagKey: string;
@@ -335,15 +429,15 @@ export interface components {
             updatedAt: string;
             variants: components["schemas"]["VariantDto"][];
             /** Format: int64 */
-            version: number | string;
+            version: number;
         };
         FlagExposureResponse: {
             byVariant: components["schemas"]["VariantExposureDto"][];
             flagKey: string;
             /** Format: int64 */
-            totalConversions: number | string;
+            totalConversions: number;
             /** Format: int64 */
-            totalExposures: number | string;
+            totalExposures: number;
         };
         FlagResponse: {
             /** Format: date-time */
@@ -354,16 +448,30 @@ export interface components {
             key: string;
             killSwitchEngaged: boolean;
             name: string;
-            rollout: null | components["schemas"]["RolloutDto"];
+            rollout: components["schemas"]["RolloutDto"] | null;
             status: string;
             targetingRules: components["schemas"]["TargetingRuleDto"][];
             /** Format: date-time */
             updatedAt: string;
             /** Format: int64 */
-            version: number | string;
+            version: number;
         };
         KillSwitchRequest: {
             engaged: boolean;
+        };
+        LiveTelemetryResponse: {
+            /** Format: int32 */
+            activeFlags: number;
+            /** Format: int32 */
+            killSwitchesEngaged: number;
+            /** Format: date-time */
+            serverTime: string;
+            /** Format: int64 */
+            snapshotAgeSeconds: number | null;
+            /** Format: date-time */
+            snapshotBuiltAt: string;
+            /** Format: int64 */
+            snapshotVersion: number;
         };
         LoginRequest: {
             email: string;
@@ -372,7 +480,7 @@ export interface components {
         LoginResponse: {
             accessToken: string;
             /** Format: int32 */
-            expiresInSeconds: number | string;
+            expiresInSeconds: number;
             refreshToken: string;
             role: string;
             tokenType: string;
@@ -384,26 +492,37 @@ export interface components {
             userId: string;
         };
         ProblemDetails: {
-            detail?: null | string;
-            instance?: null | string;
+            detail?: string | null;
+            instance?: string | null;
             /** Format: int32 */
-            status?: null | number | string;
-            title?: null | string;
-            type?: null | string;
+            status?: number | null;
+            title?: string | null;
+            type?: string | null;
         };
         RefreshRequest: {
             refreshToken: string;
         };
+        RegisterDeviceRequest: {
+            platform: string;
+            token: string;
+        };
+        RegisterDeviceResponse: {
+            /** Format: uuid */
+            id: string;
+            platform: string;
+            /** Format: date-time */
+            registeredAt: string;
+        };
         RolloutDto: {
             /** Format: int32 */
-            percentage: number | string;
+            percentage: number;
             salt: string;
         };
         SnapshotVersionResponse: {
             /** Format: date-time */
             builtAt: string;
             /** Format: int64 */
-            version: number | string;
+            version: number;
         };
         TargetingRuleDto: {
             attribute: string;
@@ -417,24 +536,24 @@ export interface components {
         UpdateFlagRequest: {
             defaultOutcome: boolean;
             name: string;
-            rollout: null | components["schemas"]["RolloutDto"];
-            targetingRules: null | components["schemas"]["TargetingRuleDto"][];
+            rollout: components["schemas"]["RolloutDto"] | null;
+            targetingRules: components["schemas"]["TargetingRuleDto"][] | null;
         };
         VariantDto: {
             key: string;
             /** Format: int32 */
-            weight: number | string;
+            weight: number;
         };
         VariantExposureDto: {
             /** Format: double */
-            conversionRatePercent: number | string;
+            conversionRatePercent: number;
             /** Format: int64 */
-            conversions: number | string;
+            conversions: number;
             /** Format: int64 */
-            exposures: number | string;
+            exposures: number;
             /** Format: double */
-            sharePercent: number | string;
-            variantKey: null | string;
+            sharePercent: number;
+            variantKey: string | null;
         };
     };
     responses: never;
@@ -445,6 +564,115 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ListAlerts: {
+        parameters: {
+            query?: {
+                unacknowledgedOnly?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertResponse"][];
+                };
+            };
+        };
+    };
+    RegisterPushDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisterDeviceResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RevokePushDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AcknowledgeAlert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     Login: {
         parameters: {
             query?: never;
@@ -1107,6 +1335,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FlagExposureResponse"];
+                };
+            };
+        };
+    };
+    GetLiveTelemetry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveTelemetryResponse"];
                 };
             };
         };

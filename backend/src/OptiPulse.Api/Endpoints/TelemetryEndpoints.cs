@@ -15,7 +15,11 @@ public static class TelemetryEndpoints
     {
         var group = app.MapGroup($"{ApiVersioning.RoutePrefix}/telemetry")
             .WithApiVersionSet(versionSet)
-            .MapToApiVersion(ApiVersioning.V1);
+            .MapToApiVersion(ApiVersioning.V1)
+            // Tags group the generated clients. Without them every operation lands in a
+            // single god-class (OptiPulseApiApi) in the Dart client, which the mobile app
+            // then has to import wholesale to call one endpoint.
+            .WithTags("Telemetry");
 
         // Reported by the host application, so it authenticates with a SERVICE-ACCOUNT
         // credential like /evaluate — a conversion is machine-reported telemetry, not a human
@@ -78,6 +82,32 @@ public static class TelemetryEndpoints
         .Produces<FlagExposureResponse>(StatusCodes.Status200OK)
         .RequireAuthorization(AuthConfiguration.AnyRolePolicy);
 
+        // T071 — live operational signals for the mobile app.
+        //
+        // Reads the in-memory snapshot rather than the database: this is what evaluation is
+        // ACTUALLY serving right now, which during a Postgres blip is exactly the number an
+        // operator needs and exactly the one a database query cannot give them.
+        group.MapGet("/live", (
+            OptiPulse.Evaluation.Application.ISnapshotStore snapshotStore,
+            TimeProvider timeProvider) =>
+        {
+            var snapshot = snapshotStore.Current;
+            var killed = snapshot.Flags.Count(f => f.KillSwitchEngaged);
+
+            return Results.Ok(new LiveTelemetryResponse(
+                SnapshotVersion: snapshot.Version,
+                SnapshotBuiltAt: snapshot.BuiltAt,
+                SnapshotAgeSeconds: snapshot.Version == 0
+                    ? null
+                    : (long)(timeProvider.GetUtcNow() - snapshot.BuiltAt).TotalSeconds,
+                ActiveFlags: snapshot.Count,
+                KillSwitchesEngaged: killed,
+                ServerTime: timeProvider.GetUtcNow()));
+        })
+        .WithName("GetLiveTelemetry")
+        .Produces<LiveTelemetryResponse>(StatusCodes.Status200OK)
+        .RequireAuthorization(AuthConfiguration.AdminPolicy);
+
         return app;
     }
 
@@ -111,3 +141,16 @@ public sealed record FlagExposureResponse(
 [JsonSerializable(typeof(ConversionResponse))]
 [JsonSerializable(typeof(FlagExposureResponse))]
 internal partial class TelemetryJsonContext : JsonSerializerContext;
+
+/// <param name="SnapshotAgeSeconds">
+/// Null when nothing has been published yet. How stale the served flag set is — the single most
+/// useful number during an invalidation outage, because a snapshot that stopped updating still
+/// serves perfectly valid-looking answers from old rules.
+/// </param>
+public sealed record LiveTelemetryResponse(
+    long SnapshotVersion,
+    DateTimeOffset SnapshotBuiltAt,
+    long? SnapshotAgeSeconds,
+    int ActiveFlags,
+    int KillSwitchesEngaged,
+    DateTimeOffset ServerTime);
