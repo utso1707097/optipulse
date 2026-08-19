@@ -16,6 +16,10 @@
 databases:
   - name: optipulse-postgres
     plan: free
+    # MUST match the services' region. Render defaults a database to Oregon, and a database in a
+    # different region than the API cannot be reached over the private network — the deploy then
+    # fails to connect with an error that says nothing about regions.
+    region: frankfurt
     databaseName: optipulse
     user: optipulse
 
