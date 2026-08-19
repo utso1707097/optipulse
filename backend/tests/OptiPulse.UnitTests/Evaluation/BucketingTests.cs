@@ -49,6 +49,51 @@ public sealed class BucketingTests
     }
 
     [Fact]
+    public void ComputeBucket_AcrossManyFlagKeys_IsUniformOnAverage()
+    {
+        // The uniformity claim in SC-003 is about bucketing in general, not about one lucky
+        // flag key — and a single 10,000-sample draw cannot carry it. The standard error of
+        // that proportion is 0.5%, so asserting +/-1% on one draw is a two-sigma test that
+        // fails about one run in twenty. The integration test used to do exactly that with a
+        // random key, and flaked accordingly.
+        //
+        // Here the sample is pooled across 200 distinct flag keys, so n = 400,000 and the
+        // standard error falls to roughly 0.08%. The 0.5% bound below is therefore about six
+        // sigma: comfortably deterministic in practice, while still tight enough that a
+        // genuinely skewed hash could not pass.
+        const int flagKeys = 200;
+        const int contextsPerKey = 2_000;
+        const int rolloutBasisPoints = 5_000; // 50%
+
+        int enabledCount = 0;
+        int worstKeyDeviationBp = 0;
+
+        for (int f = 0; f < flagKeys; f++)
+        {
+            int enabledForKey = 0;
+            for (int i = 0; i < contextsPerKey; i++)
+            {
+                var bucket = MurmurHash3.ComputeBucket($"flag-{f}", "rollout-salt", $"user-{i}");
+                if (bucket < rolloutBasisPoints)
+                    enabledForKey++;
+            }
+
+            enabledCount += enabledForKey;
+
+            int deviationBp = Math.Abs((enabledForKey * 10_000 / contextsPerKey) - 5_000);
+            worstKeyDeviationBp = Math.Max(worstKeyDeviationBp, deviationBp);
+        }
+
+        double pooledShare = enabledCount / (double)(flagKeys * contextsPerKey);
+        pooledShare.Should().BeApproximately(0.50, 0.005);
+
+        // No individual key may be wildly skewed either. This bound is deliberately loose —
+        // a 2,000-sample draw has a 1.1% standard error, so anything tighter would reintroduce
+        // the flakiness this test exists to replace. It catches gross bias, not noise.
+        worstKeyDeviationBp.Should().BeLessThan(600);
+    }
+
+    [Fact]
     public void ComputeBucket_DifferentSalt_ChangesBucketAssignment()
     {
         // Changing the salt reshuffles buckets (data-model.md: regenerating salt reshuffles).

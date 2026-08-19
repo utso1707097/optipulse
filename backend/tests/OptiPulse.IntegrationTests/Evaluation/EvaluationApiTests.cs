@@ -64,8 +64,24 @@ public sealed class EvaluationApiTests(OptiPulseTestFixture fixture)
     public async Task Evaluate_FiftyPercentRollout_10kDistinctContexts_MatchesTargetWithinOnePercent_AndIsDeterministic()
     {
         // SC-003 exercised end-to-end through the live HTTP API + real invalidation pathway.
+        //
+        // THE FLAG KEY IS FIXED, and must stay fixed. MurmurHash3.ComputeBucket hashes
+        // flagKey:salt:contextKey, so a `Guid.NewGuid()` in the key — which is what this test
+        // used to do — makes every run an independent random draw of 10,000 Bernoulli(0.5)
+        // trials. The standard error of that proportion is sqrt(0.25/10_000) = 0.5%, so the
+        // +/-1% assertion below was a two-sigma test: it failed roughly one run in twenty,
+        // regardless of whether anything was broken. Simulating the same hash over 400 random
+        // keys reproduced it at 4.5%.
+        //
+        // A fixed key makes the realised share a constant, so this test now fails only when the
+        // bucketing actually changes. Safe because the fixture creates a fresh Postgres
+        // container per run, so there is nothing to collide with.
+        //
+        // The claim that bucketing is uniform for ARBITRARY keys is a statistical one and
+        // belongs where many keys can be sampled cheaply in-process — see
+        // BucketingTests.ComputeBucket_AcrossManyFlagKeys_IsUniformOnAverage.
         var flag = Flag.Create(
-            key: $"rollout-test-{Guid.NewGuid():N}",
+            key: "rollout-50pct-e2e",
             name: "Rollout Test",
             defaultOutcome: false,
             now: DateTimeOffset.UtcNow,
