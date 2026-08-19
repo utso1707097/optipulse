@@ -12,6 +12,14 @@ Thumbs.db
 *.env
 .env
 .env.*
+# ...but the TEMPLATE must ship. `.env.*` above matches `.env.example`, which silently kept it
+# out of the repository even though the dashboard README and DEPLOYMENT.md both tell readers to
+# copy it. An ignore rule that hides the file documenting which variables exist defeats itself.
+!.env.example
+
+# Written by `vercel link`. Holds the org and project IDs the CI deploy job uses — those belong
+# in GitHub Actions secrets, not in the repository.
+.vercel
 **/appsettings.*.Local.json
 **/secrets.json
 *.pem

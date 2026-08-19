@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Written by `vercel link`. Holds the org and project IDs used by the CI deploy job — they belong
+# in GitHub Actions secrets, not in the repository.
+.vercel
