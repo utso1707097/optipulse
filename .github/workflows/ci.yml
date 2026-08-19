@@ -232,6 +232,10 @@ jobs:
             echo "::notice::VERCEL_TOKEN not set — skipping dashboard deploy."
             exit 0
           fi
+          # `vercel build` runs the project's build command but does NOT install dependencies
+          # when it is invoked outside Vercel's own builder, so `vite build` fails with
+          # "vite: not found". Install first, deterministically from the lockfile.
+          npm ci
           npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
           npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
           npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
