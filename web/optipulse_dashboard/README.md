@@ -33,12 +33,35 @@ npm run lint     # oxlint
 npm run format   # prettier --write
 ```
 
-## Environment
+## Running it locally
+
+**Leave `VITE_API_URL` unset for local development.** With it unset the client makes same-origin
+requests, and `vite.config.ts` proxies `/api` and `/health` to a backend:
+
+```bash
+# against a locally-running API (the default, http://localhost:5289)
+npm run dev
+
+# against the deployed API
+OPTIPULSE_API_PROXY=https://optipulse-api.onrender.com npm run dev
+```
+
+**This is a proxy, not a CORS entry, and the difference matters.** The browser only ever sees
+`http://localhost:5173`, so no cross-origin request is made and no preflight happens — CORS is
+not involved at all. Adding `http://localhost:5173` to the deployed API's allowlist would instead
+make production permanently trust an origin that any developer's machine can serve, including one
+running something other than this dashboard. A local convenience should not widen what production
+accepts.
+
+If you set `VITE_API_URL` locally you opt out of the proxy and go cross-origin directly, which
+then _does_ require the API to allow your origin. Don't, unless you have a reason.
+
+## Environment (deployed builds)
 
 `VITE_API_URL` must point at the deployed API — the dashboard and API are on different origins,
-so a relative base URL only works behind a local dev proxy. Copy `.env.example` to `.env.local`
-for local work. The API must also list this dashboard's origin in `Cors__AllowedOrigins`, or the
-browser blocks every request before it reaches the server.
+so a relative base URL cannot work in production. It is inlined by Vite at **build** time, so it
+must be set before the build, not after. The API must also list this dashboard's origin in
+`Cors__AllowedOrigins`, or the browser blocks every request before it reaches the server.
 
 ## Micro-copy
 
