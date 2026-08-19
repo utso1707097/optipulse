@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
@@ -6,8 +8,13 @@ import 'package:path_provider/path_provider.dart';
 import 'core/di/injection.dart';
 import 'features/auth/presentation/auth_cubit.dart';
 import 'features/auth/presentation/login_screen.dart';
+import 'features/alerts/data/push_registrar.dart';
+import 'features/alerts/presentation/alerts_cubit.dart';
+import 'features/alerts/presentation/alerts_screen.dart';
 import 'features/killswitch/presentation/kill_switch_cubit.dart';
 import 'features/killswitch/presentation/kill_switch_screen.dart';
+import 'features/telemetry/presentation/telemetry_cubit.dart';
+import 'features/telemetry/presentation/telemetry_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,19 +84,43 @@ class _AuthGate extends StatelessWidget {
   }
 }
 
-/// The signed-in shell. Telemetry and alerts (T074, T075) join the kill switch here.
-class _Home extends StatelessWidget {
+/// The signed-in shell: telemetry, alerts and the kill switch.
+class _Home extends StatefulWidget {
   const _Home();
+
+  @override
+  State<_Home> createState() => _HomeState();
+}
+
+class _HomeState extends State<_Home> {
+  int _tab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Fire-and-forget: registration is an enhancement, and an app that blocked on it would be
+    // trading the features that work for the one that does not. With no push provider
+    // configured this resolves to false immediately.
+    unawaited(getIt<PushRegistration>().registerIfAvailable());
+  }
 
   @override
   Widget build(BuildContext context) {
     final role = context.select<AuthCubit, String>((c) => c.state.session?.role ?? 'unknown');
 
-    return BlocProvider<KillSwitchCubit>(
-      create: (_) => getIt<KillSwitchCubit>()..loadFlags(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<TelemetryCubit>(create: (_) => getIt<TelemetryCubit>()),
+        BlocProvider<AlertsCubit>(create: (_) => getIt<AlertsCubit>()..load()),
+        BlocProvider<KillSwitchCubit>(create: (_) => getIt<KillSwitchCubit>()..loadFlags()),
+      ],
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Kill switch'),
+          title: Text(switch (_tab) {
+            0 => 'Telemetry',
+            1 => 'Alerts',
+            _ => 'Kill switch',
+          }),
           actions: [
             Center(
               child: Padding(
@@ -104,7 +135,40 @@ class _Home extends StatelessWidget {
             ),
           ],
         ),
-        body: const KillSwitchScreen(),
+        body: IndexedStack(
+          index: _tab,
+          children: const [TelemetryScreen(), AlertsScreen(), KillSwitchScreen()],
+        ),
+        bottomNavigationBar: BlocBuilder<AlertsCubit, AlertsState>(
+          builder: (context, alerts) => NavigationBar(
+            selectedIndex: _tab,
+            onDestinationSelected: (index) => setState(() => _tab = index),
+            destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.monitor_heart_outlined),
+                selectedIcon: Icon(Icons.monitor_heart),
+                label: 'Telemetry',
+              ),
+              NavigationDestination(
+                // The badge counts UNACKNOWLEDGED alerts, so it clears by responding rather than
+                // by opening the tab — an ops badge that disappears on a glance stops meaning
+                // "something still needs attention".
+                icon: Badge(
+                  isLabelVisible: alerts.unacknowledgedCount > 0,
+                  label: Text('${alerts.unacknowledgedCount}'),
+                  child: const Icon(Icons.notifications_outlined),
+                ),
+                selectedIcon: const Icon(Icons.notifications),
+                label: 'Alerts',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.block_outlined),
+                selectedIcon: Icon(Icons.block),
+                label: 'Kill switch',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

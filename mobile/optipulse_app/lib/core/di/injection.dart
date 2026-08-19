@@ -9,7 +9,14 @@ import '../../features/auth/domain/auth_session.dart';
 import '../../features/auth/presentation/auth_cubit.dart';
 import '../../features/killswitch/data/flag_repository_impl.dart';
 import '../../features/killswitch/domain/flag_repository.dart';
+import '../../features/alerts/data/alert_repository_impl.dart';
+import '../../features/alerts/data/push_registrar.dart';
+import '../../features/alerts/domain/alert_repository.dart';
+import '../../features/alerts/presentation/alerts_cubit.dart';
 import '../../features/killswitch/presentation/kill_switch_cubit.dart';
+import '../../features/telemetry/data/telemetry_repository_impl.dart';
+import '../../features/telemetry/domain/telemetry_repository.dart';
+import '../../features/telemetry/presentation/telemetry_cubit.dart';
 import '../network/api_client.dart';
 import '../reconcile/connectivity_monitor.dart';
 
@@ -76,6 +83,24 @@ Future<void> configureDependencies() async {
 
   getIt.registerFactory<KillSwitchCubit>(
     () => KillSwitchCubit(getIt(), connectivity: getIt<ConnectivityMonitor>()),
+  );
+
+  getIt.registerLazySingleton<TelemetryRepository>(
+    () => TelemetryRepositoryImpl(getIt<Openapi>().getTelemetryApi()),
+  );
+  getIt.registerFactory<TelemetryCubit>(() => TelemetryCubit(getIt()));
+
+  getIt.registerLazySingleton<AlertRepository>(
+    () => AlertRepositoryImpl(getIt<Openapi>().getAlertsApi()),
+  );
+  getIt.registerFactory<AlertsCubit>(() => AlertsCubit(getIt()));
+
+  // No push provider is configured. The backend treats push as a delivery optimisation over a
+  // durable history, so this is a working default rather than a gap — swap in a
+  // firebase_messaging implementation and nothing else changes.
+  getIt.registerLazySingleton<PushRegistrar>(() => const NoPushRegistrar());
+  getIt.registerLazySingleton<PushRegistration>(
+    () => PushRegistration(getIt<PushRegistrar>(), getIt<AlertRepository>()),
   );
 }
 
