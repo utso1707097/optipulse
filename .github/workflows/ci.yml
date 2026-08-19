@@ -207,9 +207,12 @@ jobs:
     needs: [backend, contracts-drift, web, mobile]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
-    defaults:
-      run:
-        working-directory: web/optipulse_dashboard
+    # NOTE: this job deliberately runs from the REPOSITORY ROOT, unlike the `web` job above.
+    # The Vercel project's own Root Directory setting is `web/optipulse_dashboard`, and
+    # `vercel build` applies it relative to the working directory. Running the CLI from inside
+    # that same folder applies the prefix twice, so the build looks for
+    # web/optipulse_dashboard/web/optipulse_dashboard and fails with UNRESOLVED_ENTRY on
+    # index.html. Root here, once there, is the arrangement that resolves correctly.
     steps:
       - uses: actions/checkout@v4
 
@@ -234,8 +237,9 @@ jobs:
           fi
           # `vercel build` runs the project's build command but does NOT install dependencies
           # when it is invoked outside Vercel's own builder, so `vite build` fails with
-          # "vite: not found". Install first, deterministically from the lockfile.
-          npm ci
+          # "vite: not found". Install first, deterministically from the lockfile, into the
+          # dashboard folder where the build will actually run.
+          npm ci --prefix web/optipulse_dashboard
           npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
           npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
           npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
