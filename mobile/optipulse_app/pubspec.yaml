@@ -37,6 +37,7 @@ dependencies:
   # would be reverted by the next generation run and fail the gate in CI.
   openapi:
     path: lib/core/generated
+  flutter_secure_storage: ^11.0.0
 
 dev_dependencies:
   flutter_test:
