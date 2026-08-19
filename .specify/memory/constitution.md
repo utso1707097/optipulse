@@ -1,6 +1,31 @@
 <!--
 Sync Impact Report
 ==================
+Version change: 2.3.0 → 2.4.0
+Rationale: MINOR bump. Principle V's React state-management pin is RELAXED to permit Redux
+Toolkit, at the maintainer's decision, taken before any dashboard code exists. Amended rather
+than quietly violated: the code and this document disagreeing is the failure mode v2.2.0 was
+written to end, and a pin that is ignored in practice provides no governance.
+
+Modified principles:
+- V. Dual-Client Strategy — the React client may now use Redux Toolkit for client state. The
+  constraints that remain are the ones that protect the architecture rather than the taste:
+  server state is still not cached in a client store as a second source of truth, and auth
+  logic still lives only in the backend (Principle VI).
+
+Added/updated sections:
+- Adopted Toolchain & Practice Baselines: React state pin rewritten; Tailwind CSS adopted for
+  styling, which the constitution previously did not address at all.
+
+Note on the trade-off, recorded so the decision is legible later: nearly all dashboard state is
+SERVER state (flags, experiments, analytics), which a store does not make easier to manage. The
+original pin existed for that reason. The maintainer has chosen Redux Toolkit anyway; this
+document now says so plainly instead of being contradicted by the code.
+-->
+
+<!--
+Sync Impact Report
+==================
 Version change: 2.2.0 → 2.3.0
 Rationale: MINOR bump. Added a Deployment & First-Run Bootstrap baseline. The project had no
 governance covering how it reaches a running environment, and the gap became concrete when
@@ -219,10 +244,17 @@ the letter of the rule and wired to nothing, leaving the real dependencies unpro
 OptiPulse ships exactly two first-party clients, each held to a deliberately different
 standard:
 
-- **Web Dashboard (React)**: A lightweight, always-online React application. It MUST use
-  simplified React hooks and lightweight local state (component/hook state or a minimal store);
-  it MUST NOT introduce offline-first persistence, heavy client-side domain layers, or complex
-  state frameworks. It assumes network availability and reads server truth directly.
+- **Web Dashboard (React)**: A lightweight, always-online React application. Client state MAY be
+  managed with Redux Toolkit or with hooks and context; that choice is left to the maintainer
+  (amended in v2.4.0). Three constraints remain, because they protect the architecture rather
+  than the styling of it:
+  - It MUST NOT introduce offline-first persistence. Offline-first is the Flutter client's job;
+    duplicating it here would mean two different reconciliation models for the same data.
+  - Server state MUST NOT become a second source of truth. A store may hold fetched data for
+    rendering, but the backend remains authoritative and the dashboard reads it directly rather
+    than reconciling a local copy against it.
+  - It MUST NOT contain a client-side domain layer. Business rules — targeting, rollout,
+    kill-switch precedence — live in the backend and are not reimplemented for display.
 - **Mobile App (Flutter)**: An offline-first Flutter application that MUST follow Clean
   Architecture with BLoC/Cubit for state management, HydratedBloc for persisted/offline state,
   and Dio for network access behind a repository abstraction. UI MUST NOT contain business
@@ -405,8 +437,11 @@ baseline requirements derived from them:
   resilience pipelines, or other indirection layers (protects Principle II); such patterns are for
   management/CRUD paths only.
 - **Client pins**: Flutter state = BLoC/Cubit + HydratedBloc only (no Riverpod/Provider/ChangeNotifier
-  for app state); React state = custom hooks + a single AuthContext only (no Redux/MobX/Zustand/React
-  Query); Flutter networking = Dio; both clients' API models MUST be OpenAPI-generated.
+  for app state). React state = **Redux Toolkit** or hooks/context, maintainer's choice (v2.4.0);
+  if Redux is used it MUST be Redux Toolkit rather than hand-written reducers and boilerplate.
+  Flutter networking = Dio; both clients' API models MUST be OpenAPI-generated.
+- **React styling**: **Tailwind CSS** (adopted v2.4.0; the constitution previously said nothing
+  about styling). Utility classes in components are expected and are not an architecture concern.
 
 ## Governance
 
@@ -428,4 +463,4 @@ one direction — by fixing the code, or by amending this document with rational
 leaving the contradiction in place. A principle the code silently violates provides no
 governance while still implying that it does.
 
-**Version**: 2.3.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-18
+**Version**: 2.4.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-19

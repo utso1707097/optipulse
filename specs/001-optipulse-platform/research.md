@@ -119,17 +119,17 @@ alternatives that shape Phase 1 design.
   conflict merging (ambiguous, unnecessary for a read-mostly client) — rejected; **Flutter Web for
   the dashboard — rejected** in favor of a purpose-built lightweight React app (R9).
 
-## R9. React Web Dashboard (Managers) — simplified hooks, no Redux
+## R9. React Web Dashboard (Managers) — Redux Toolkit + Tailwind (revised, constitution v2.4.0)
 
 - **Decision**: Build the manager console as a lightweight React + TypeScript app (Vite). State is
   managed with **standard custom hooks** (`useFlags`, `useExperiments`, `useMicroCopy`,
   `useAnalytics`, `useAuth`) wrapping the generated typed API client; the only cross-cutting global
-  state is a small `AuthContext` holding the opaque session. **No Redux/MobX/Zustand** and no
+  state is managed with **Redux Toolkit**; the session remains opaque to the client. No
   offline persistence — the dashboard is always-online (Principle V, FR-029).
 - **Rationale**: The dashboard operates on reliable networks and reads server truth directly;
   heavy client state would over-engineer it. Custom hooks keep data-fetching colocated and simple,
   and TypeScript types generated from OpenAPI (R11) prevent contract drift.
-- **Alternatives considered**: Redux Toolkit / Zustand (unnecessary global store for a read-mostly,
+- **Superseded decision (v2.4.0)**: this originally pinned custom hooks and rejected a global store, on the grounds that a read-mostly dashboard whose state is almost entirely SERVER state gains little from one. The maintainer chose Redux Toolkit before any dashboard code existed; the reasoning is preserved here so the trade-off stays legible. Original note: Redux Toolkit / Zustand (unnecessary global store for a read-mostly,
   always-online console) — rejected per Principle V; Flutter Web (duplicate renderer, heavier) —
   rejected; server-driven UI (over-engineered for v1) — rejected. A lightweight query cache
   (e.g., TanStack Query) MAY be adopted inside the custom hooks if needed, but is not required and
@@ -259,7 +259,7 @@ alternatives that shape Phase 1 design.
 | Audit immutability & exposure cost | Append-only + async channel writer (R6) |
 | AI provider coupling & approval | Port/adapter + Draft→Approved state machine (R7) |
 | Mobile (Admin) offline model | Flutter iOS/Android, HydratedBloc + version reconcile (R8) |
-| Web (Manager) client | React + custom hooks, no Redux, always-online (R9) |
+| Web (Manager) client | React + Redux Toolkit + Tailwind, always-online (R9, v2.4.0) |
 | Authentication & RBAC | Custom JWT, rotating revocable refresh, backend policies (R10) |
 | Client contract drift | Native OpenAPI → TS + Dart codegen + CI drift gate (R11) |
 | Critical-event alerting | Detect → push (FCM/APNs) behind abstraction + durable history (R12) |

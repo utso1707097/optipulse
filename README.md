@@ -26,7 +26,7 @@ gateway behind a human-approval gate — governed by an immutable audit trail.
 ## Clients
 
 - **Web Dashboard (React)** — always-online console for Product & Marketing managers: flag creation,
-  experiment management, micro-copy generation/approval, analytics. Lightweight custom hooks, no Redux.
+  experiment management, micro-copy generation/approval, analytics. Redux Toolkit + Tailwind CSS.
 - **Mobile App (Flutter)** — offline-first ops app for Admin & DevOps engineers: real-time telemetry,
   push notifications on critical events, instant kill-switch. iOS + Android (Clean Architecture, BLoC/Cubit).
 

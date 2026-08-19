@@ -86,7 +86,7 @@ Change an endpoint's schema in the backend **without** regenerating clients; run
 
 ### V11 — Manager Web Dashboard (US3, FR-029, Principle V)
 In the React app: log in as Manager, create a flag + experiment, generate/approve micro-copy, open
-analytics. **Expect**: all succeed via generated typed client + custom hooks (no Redux store); when
+analytics. **Expect**: all succeed via the generated typed client + Redux Toolkit store; when
 offline, the dashboard clearly requires connectivity rather than showing stale editable state.
 
 ### V12 — Admin Mobile push + offline reconcile (US4, FR-026/028, SC-011)

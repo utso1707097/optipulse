@@ -2,7 +2,7 @@
 
 The always-online manager console for Product & Marketing: flag creation, experiment management,
 AI micro-copy generation/approval, and analytics review. Lightweight React + TypeScript (Vite) with
-**standard custom hooks** and a single `AuthContext` — **no Redux/MobX/Zustand**. API access via a
+**Redux Toolkit** for client state and **Tailwind CSS** for styling (constitution v2.4.0). API access via a
 TypeScript client generated from the backend OpenAPI spec.
 
 - Design & constraints: [../../specs/001-optipulse-platform/plan.md](../../specs/001-optipulse-platform/plan.md) (Principle V)
