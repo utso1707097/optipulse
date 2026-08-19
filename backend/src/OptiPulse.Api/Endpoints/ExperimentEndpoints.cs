@@ -27,6 +27,7 @@ public static class ExperimentEndpoints
             return Results.Ok(experiments.Select(ToResponse).ToArray());
         })
         .WithName("ListExperiments")
+        .Produces<ExperimentResponse[]>(StatusCodes.Status200OK)
         .RequireAuthorization(AuthConfiguration.AnyRolePolicy);
 
         group.MapGet("/{id:guid}", async (Guid id, ExperimentService service, CancellationToken ct) =>
@@ -37,6 +38,8 @@ public static class ExperimentEndpoints
                 : Results.Ok(ToResponse(experiment));
         })
         .WithName("GetExperiment")
+        .Produces<ExperimentResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization(AuthConfiguration.AnyRolePolicy);
 
         group.MapPost("/", async (
@@ -57,6 +60,9 @@ public static class ExperimentEndpoints
                 : Results.Created($"/api/v1/experiments/{result.Value.Id}", ToResponse(result.Value));
         })
         .WithName("CreateExperiment")
+        .Produces<ExperimentResponse>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
         .RequireAuthorization(AuthConfiguration.ManagerPolicy);
 
         group.MapPut("/{id:guid}", async (
@@ -84,6 +90,11 @@ public static class ExperimentEndpoints
             return result.IsFailure ? Problem(result.Error) : Results.Ok(ToResponse(result.Value));
         })
         .WithName("UpdateExperiment")
+        .Produces<ExperimentResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+        .ProducesProblem(StatusCodes.Status428PreconditionRequired)
         .RequireAuthorization(AuthConfiguration.ManagerPolicy);
 
         group.MapPost("/{id:guid}/status", async (
@@ -103,6 +114,9 @@ public static class ExperimentEndpoints
             return result.IsFailure ? Problem(result.Error) : Results.Ok(ToResponse(result.Value));
         })
         .WithName("ChangeExperimentStatus")
+        .Produces<ExperimentResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
         .RequireAuthorization(AuthConfiguration.ManagerPolicy);
 
         return app;
