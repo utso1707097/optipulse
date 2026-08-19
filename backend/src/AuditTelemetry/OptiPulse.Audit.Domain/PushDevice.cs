@@ -50,11 +50,11 @@ public sealed class PushDevice
     public bool IsActive => RevokedAt is null;
 
     public static PushDevice Register(Guid userId, DevicePlatform platform, string token, DateTimeOffset now)
-        => new(Guid.CreateVersion7(), userId, platform, token, now);
+        => new(Guid.CreateVersion7(), userId, platform, token, PersistableTime.Truncate(now));
 
     public void Touch(DateTimeOffset now)
     {
-        LastSeenAt = now;
+        LastSeenAt = PersistableTime.Truncate(now);
         RevokedAt = null; // re-registering revives a device that was previously retired
     }
 
@@ -63,5 +63,5 @@ public sealed class PushDevice
     /// invalid — sending to a dead token forever is how a notification backlog turns into a
     /// rate-limit problem for the tokens that still work.
     /// </summary>
-    public void Revoke(DateTimeOffset now) => RevokedAt = now;
+    public void Revoke(DateTimeOffset now) => RevokedAt = PersistableTime.Truncate(now);
 }

@@ -85,7 +85,8 @@ public sealed class Alert
         string dedupeKey,
         DateTimeOffset now,
         string? flagKey = null)
-        => new(Guid.CreateVersion7(), now, kind, severity, title, detail, dedupeKey, flagKey);
+        => new(Guid.CreateVersion7(), PersistableTime.Truncate(now), kind, severity, title, detail, dedupeKey, flagKey);
+
 
     /// <summary>
     /// Records that an operator has seen this. Idempotent: acknowledging twice keeps the FIRST
@@ -95,7 +96,7 @@ public sealed class Alert
     public void Acknowledge(string actor, DateTimeOffset now)
     {
         if (IsAcknowledged) return;
-        AcknowledgedAt = now;
+        AcknowledgedAt = PersistableTime.Truncate(now);
         AcknowledgedBy = actor;
     }
 }

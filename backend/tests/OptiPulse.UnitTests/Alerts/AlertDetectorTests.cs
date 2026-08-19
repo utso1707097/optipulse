@@ -116,6 +116,25 @@ public sealed class AlertDetectorTests
     }
 
     [Fact]
+    public void Timestamps_AreStampedAtThePrecisionPostgresCanStore()
+    {
+        // .NET ticks are 100ns; timestamptz stores microseconds. Stamping at full tick precision
+        // makes a write response differ from every later read of the same row — nine times out
+        // of ten, which is exactly often enough to pass locally and fail in CI.
+        var ragged = new DateTimeOffset(2026, 8, 19, 12, 0, 0, TimeSpan.Zero).AddTicks(1_234_567);
+
+        var alert = AlertDetector.KillSwitchChanged("f", true, "ada", ragged);
+        alert.Acknowledge("ada", ragged);
+
+        (alert.RaisedAt.Ticks % TimeSpan.TicksPerMicrosecond).Should().Be(0);
+        (alert.AcknowledgedAt!.Value.Ticks % TimeSpan.TicksPerMicrosecond).Should().Be(0);
+
+        // Truncated, not rounded up: a timestamp must never claim to be later than the instant
+        // it was taken.
+        alert.RaisedAt.Should().BeOnOrBefore(ragged);
+    }
+
+    [Fact]
     public void AlertsAreAcknowledgedOnce_KeepingTheFirstResponder()
     {
         // Two Admins opening the app at the same moment must not make the record of who
