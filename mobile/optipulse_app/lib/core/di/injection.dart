@@ -7,6 +7,9 @@ import '../../features/auth/data/token_store.dart';
 import '../../features/auth/domain/auth_repository.dart';
 import '../../features/auth/domain/auth_session.dart';
 import '../../features/auth/presentation/auth_cubit.dart';
+import '../../features/killswitch/data/flag_repository_impl.dart';
+import '../../features/killswitch/domain/flag_repository.dart';
+import '../../features/killswitch/presentation/kill_switch_cubit.dart';
 import '../network/api_client.dart';
 
 final getIt = GetIt.instance;
@@ -61,6 +64,14 @@ Future<void> configureDependencies() async {
       );
     },
   );
+
+  // Built on the SESSION-AWARE client (getIt<Openapi>()), unlike the auth repository above:
+  // these calls carry a bearer token and must go through the refresh interceptor.
+  getIt.registerLazySingleton<FlagRepository>(
+    () => FlagRepositoryImpl(getIt<Openapi>().getFlagsApi()),
+  );
+
+  getIt.registerFactory<KillSwitchCubit>(() => KillSwitchCubit(getIt()));
 }
 
 /// Convenience for features that only need a session-aware client.

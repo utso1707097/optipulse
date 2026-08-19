@@ -266,7 +266,7 @@ deployment an operator can log into.
 - [X] T073 [P] [US4] Implement auth feature (login, opaque token storage, silent refresh) in `mobile/optipulse_app/lib/features/auth/`
 - [ ] T074 [P] [US4] Implement telemetry feature (live monitoring Cubit + HydratedBloc cache) in `mobile/optipulse_app/lib/features/telemetry/`
 - [ ] T075 [P] [US4] Implement alerts feature (push handler + in-app history + ack) in `mobile/optipulse_app/lib/features/alerts/`
-- [ ] T076 [US4] Implement kill-switch feature (Admin action, pending→confirmed, never silently lost) in `mobile/optipulse_app/lib/features/killswitch/` (depends on T072, T073)
+- [X] T076 [US4] Implement kill-switch feature (Admin action, pending→confirmed, never silently lost) in `mobile/optipulse_app/lib/features/killswitch/` (depends on T072, T073)
 - [ ] T077 [US4] Implement deterministic offline reconcile on reconnect with kill-switch precedence in `mobile/optipulse_app/lib/core/reconcile/`
 
 **Checkpoint**: Admins can monitor, get alerted, and kill-switch from mobile, online or intermittently connected.

@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/di/injection.dart';
 import 'features/auth/presentation/auth_cubit.dart';
 import 'features/auth/presentation/login_screen.dart';
+import 'features/killswitch/presentation/kill_switch_cubit.dart';
+import 'features/killswitch/presentation/kill_switch_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,61 +57,41 @@ class _AuthGate extends StatelessWidget {
           case AuthStatus.unauthenticated:
             return const LoginScreen();
           case AuthStatus.authenticated:
-            return const _HomePlaceholder();
+            return const _Home();
         }
       },
     );
   }
 }
 
-/// Stands in until the telemetry, alerts and kill-switch features land (T074-T077). It shows
-/// the signed-in identity so the auth path can be verified end to end rather than assumed.
-class _HomePlaceholder extends StatelessWidget {
-  const _HomePlaceholder();
+/// The signed-in shell. Telemetry and alerts (T074, T075) join the kill switch here.
+class _Home extends StatelessWidget {
+  const _Home();
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AuthCubit>().state;
-    final theme = Theme.of(context);
+    final role = context.select<AuthCubit, String>((c) => c.state.session?.role ?? 'unknown');
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('OptiPulse'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
-            onPressed: () => context.read<AuthCubit>().logOut(),
-          ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle, size: 64, color: theme.colorScheme.primary),
-              const SizedBox(height: 16),
-              Text('Signed in', style: theme.textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(
-                'Role: ${state.session?.role ?? 'unknown'}',
-                style: theme.textTheme.bodyLarge,
+    return BlocProvider<KillSwitchCubit>(
+      create: (_) => getIt<KillSwitchCubit>()..loadFlags(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Kill switch'),
+          actions: [
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(role, style: Theme.of(context).textTheme.labelMedium),
               ),
-              const SizedBox(height: 24),
-              Text(
-                state.isAdmin
-                    ? 'Kill-switch controls will appear here (T076).'
-                    : 'Telemetry will appear here (T074). Kill-switch is Admin-only.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Sign out',
+              onPressed: () => context.read<AuthCubit>().logOut(),
+            ),
+          ],
         ),
+        body: const KillSwitchScreen(),
       ),
     );
   }
