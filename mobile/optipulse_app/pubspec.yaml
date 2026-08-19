@@ -31,6 +31,13 @@ dependencies:
   # Offline persistence backing store for HydratedBloc
   path_provider: ^2.1.6
 
+  # Generated from the backend's OpenAPI document by ../../contracts-gen/generate.sh (T072).
+  # A path dependency, not a copied-in source tree: the generator owns every file under
+  # lib/core/generated, and the contract drift gate diffs that directory. Editing it by hand
+  # would be reverted by the next generation run and fail the gate in CI.
+  openapi:
+    path: lib/core/generated
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

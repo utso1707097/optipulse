@@ -15,7 +15,11 @@ public static class TelemetryEndpoints
     {
         var group = app.MapGroup($"{ApiVersioning.RoutePrefix}/telemetry")
             .WithApiVersionSet(versionSet)
-            .MapToApiVersion(ApiVersioning.V1);
+            .MapToApiVersion(ApiVersioning.V1)
+            // Tags group the generated clients. Without them every operation lands in a
+            // single god-class (OptiPulseApiApi) in the Dart client, which the mobile app
+            // then has to import wholesale to call one endpoint.
+            .WithTags("Telemetry");
 
         // Reported by the host application, so it authenticates with a SERVICE-ACCOUNT
         // credential like /evaluate — a conversion is machine-reported telemetry, not a human

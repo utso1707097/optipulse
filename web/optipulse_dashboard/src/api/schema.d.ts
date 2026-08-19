@@ -265,37 +265,37 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         BatchEvaluateRequest: {
-            attributes: null | {
+            attributes: {
                 [key: string]: string;
-            };
-            contextKey: null | string;
+            } | null;
+            contextKey: string | null;
             flagKeys: string[];
         };
         BatchEvaluateResponse: {
             results: components["schemas"]["EvaluateResponse"][];
             /** Format: int64 */
-            snapshotVersion: number | string;
+            snapshotVersion: number;
         };
         ChangeStatusRequest: {
             status: string;
         };
         ConversionRequest: {
-            contextKey: null | string;
+            contextKey: string | null;
             /** Format: uuid */
-            experimentId: null | string;
+            experimentId: string | null;
             flagKey: string;
             goal: string;
             idempotencyKey: string;
             /** Format: double */
-            value: null | number | string;
-            variantKey: null | string;
+            value: number | null;
+            variantKey: string | null;
         };
         ConversionResponse: {
             duplicate: boolean;
             recorded: boolean;
         };
         CreateExperimentRequest: {
-            conversionGoal: null | string;
+            conversionGoal: string | null;
             flagKey: string;
             name: string;
             variants: components["schemas"]["VariantDto"][];
@@ -304,14 +304,14 @@ export interface components {
             defaultOutcome: boolean;
             key: string;
             name: string;
-            rollout: null | components["schemas"]["RolloutDto"];
-            targetingRules: null | components["schemas"]["TargetingRuleDto"][];
+            rollout: components["schemas"]["RolloutDto"] | null;
+            targetingRules: components["schemas"]["TargetingRuleDto"][] | null;
         };
         EvaluateRequest: {
-            attributes: null | {
+            attributes: {
                 [key: string]: string;
-            };
-            contextKey: null | string;
+            } | null;
+            contextKey: string | null;
             flagKey: string;
         };
         EvaluateResponse: {
@@ -319,11 +319,11 @@ export interface components {
             outcome: boolean;
             reason: string;
             /** Format: int64 */
-            snapshotVersion: number | string;
-            variantKey: null | string;
+            snapshotVersion: number;
+            variantKey: string | null;
         };
         ExperimentResponse: {
-            conversionGoal: null | string;
+            conversionGoal: string | null;
             /** Format: date-time */
             createdAt: string;
             flagKey: string;
@@ -335,15 +335,15 @@ export interface components {
             updatedAt: string;
             variants: components["schemas"]["VariantDto"][];
             /** Format: int64 */
-            version: number | string;
+            version: number;
         };
         FlagExposureResponse: {
             byVariant: components["schemas"]["VariantExposureDto"][];
             flagKey: string;
             /** Format: int64 */
-            totalConversions: number | string;
+            totalConversions: number;
             /** Format: int64 */
-            totalExposures: number | string;
+            totalExposures: number;
         };
         FlagResponse: {
             /** Format: date-time */
@@ -354,13 +354,13 @@ export interface components {
             key: string;
             killSwitchEngaged: boolean;
             name: string;
-            rollout: null | components["schemas"]["RolloutDto"];
+            rollout: components["schemas"]["RolloutDto"] | null;
             status: string;
             targetingRules: components["schemas"]["TargetingRuleDto"][];
             /** Format: date-time */
             updatedAt: string;
             /** Format: int64 */
-            version: number | string;
+            version: number;
         };
         KillSwitchRequest: {
             engaged: boolean;
@@ -372,7 +372,7 @@ export interface components {
         LoginResponse: {
             accessToken: string;
             /** Format: int32 */
-            expiresInSeconds: number | string;
+            expiresInSeconds: number;
             refreshToken: string;
             role: string;
             tokenType: string;
@@ -384,26 +384,26 @@ export interface components {
             userId: string;
         };
         ProblemDetails: {
-            detail?: null | string;
-            instance?: null | string;
+            detail?: string | null;
+            instance?: string | null;
             /** Format: int32 */
-            status?: null | number | string;
-            title?: null | string;
-            type?: null | string;
+            status?: number | null;
+            title?: string | null;
+            type?: string | null;
         };
         RefreshRequest: {
             refreshToken: string;
         };
         RolloutDto: {
             /** Format: int32 */
-            percentage: number | string;
+            percentage: number;
             salt: string;
         };
         SnapshotVersionResponse: {
             /** Format: date-time */
             builtAt: string;
             /** Format: int64 */
-            version: number | string;
+            version: number;
         };
         TargetingRuleDto: {
             attribute: string;
@@ -417,24 +417,24 @@ export interface components {
         UpdateFlagRequest: {
             defaultOutcome: boolean;
             name: string;
-            rollout: null | components["schemas"]["RolloutDto"];
-            targetingRules: null | components["schemas"]["TargetingRuleDto"][];
+            rollout: components["schemas"]["RolloutDto"] | null;
+            targetingRules: components["schemas"]["TargetingRuleDto"][] | null;
         };
         VariantDto: {
             key: string;
             /** Format: int32 */
-            weight: number | string;
+            weight: number;
         };
         VariantExposureDto: {
             /** Format: double */
-            conversionRatePercent: number | string;
+            conversionRatePercent: number;
             /** Format: int64 */
-            conversions: number | string;
+            conversions: number;
             /** Format: int64 */
-            exposures: number | string;
+            exposures: number;
             /** Format: double */
-            sharePercent: number | string;
-            variantKey: null | string;
+            sharePercent: number;
+            variantKey: string | null;
         };
     };
     responses: never;

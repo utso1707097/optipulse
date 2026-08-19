@@ -61,7 +61,20 @@ try
     builder.Services.AddProblemDetails();
 
     // Native OpenAPI (Constitution Principle VII — no Swashbuckle).
-    builder.Services.AddOpenApi();
+    //
+    // Pinned to 3.0 rather than the .NET 10 default of 3.1. The two differ on how a nullable
+    // property is expressed: 3.1 emits the JSON Schema union `"type": ["null", "object"]`,
+    // which openapi-generator's Dart target cannot map — it produces an unresolvable type and
+    // built_value codegen fails outright on EvaluateRequest.attributes. 3.0's `nullable: true`
+    // is understood by every generator in this pipeline.
+    //
+    // The contract is consumed by three generators, so it is written for the narrowest of them,
+    // not the newest spec available. Revisit when openapi-generator supports 3.1 type unions.
+    builder.Services.AddOpenApi(options =>
+    {
+        options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_0;
+        options.AddSchemaTransformer<OpenApiNumericUnionTransformer>();
+    });
 
     // Both reads deferred inside the configure-lambda (not hoisted to an outer
     // variable) so they observe the SAME configuration snapshot — including any

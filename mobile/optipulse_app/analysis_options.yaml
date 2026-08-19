@@ -9,6 +9,15 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # Generated from the backend's OpenAPI document by ../../contracts-gen/generate.sh.
+    # Excluded from analysis, not from review: we do not own its lint compliance, and the
+    # only supported way to change anything here is to change the API and regenerate.
+    # Leaving it analysed would mean either editing generated files — which the drift gate
+    # reverts — or carrying permanent warnings that train people to ignore the output.
+    - lib/core/generated/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

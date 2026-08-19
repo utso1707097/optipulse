@@ -262,7 +262,7 @@ deployment an operator can log into.
 
 ### Implementation for User Story 4 — Flutter Mobile App
 
-- [ ] T072 [US4] Generate Dart models + Dio client from `openapi.json` into `mobile/optipulse_app/lib/core/` (via `contracts-gen/generate.sh`)
+- [X] T072 [US4] Generate Dart models + Dio client from `openapi.json` into `mobile/optipulse_app/lib/core/` (via `contracts-gen/generate.sh`)
 - [ ] T073 [P] [US4] Implement auth feature (login, opaque token storage, silent refresh) in `mobile/optipulse_app/lib/features/auth/`
 - [ ] T074 [P] [US4] Implement telemetry feature (live monitoring Cubit + HydratedBloc cache) in `mobile/optipulse_app/lib/features/telemetry/`
 - [ ] T075 [P] [US4] Implement alerts feature (push handler + in-app history + ack) in `mobile/optipulse_app/lib/features/alerts/`

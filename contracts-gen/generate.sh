@@ -65,7 +65,11 @@ echo "==> Wrote $OPENAPI_OUT (servers stripped, keys sorted)"
 # up as phantom contract drift on an unrelated change. The gate is a merge blocker, so it must
 # fail only for real drift.
 OPENAPI_TS_VERSION="7.13.0"
-OPENAPI_GENERATOR_VERSION="7.11.0"
+# openapi-generator-cli reads its version from openapitools.json at the repository root, NOT
+# from this variable — passing OPENAPI_GENERATOR_VERSION in the environment did nothing, and
+# the client was being generated with 7.24.0 while this line claimed 7.11.0. The pin lives in
+# openapitools.json (committed); this value exists to be checked against what actually ran.
+OPENAPI_GENERATOR_VERSION="7.24.0"
 
 # Principle VII: FAIL, never skip. Silently skipping generation makes the gate pass by
 # diffing an unchanged (or empty) directory — enforcement that reports success while
@@ -99,10 +103,58 @@ fi
 # as there is a client that could drift.
 if find "$ROOT_DIR/mobile/optipulse_app/lib" -name '*.dart' -print -quit 2>/dev/null | grep -q .; then
   echo "==> Generating Dart client (Flutter) with openapi-generator@$OPENAPI_GENERATOR_VERSION"
-  if require_tool openapi-generator "Requires a JRE; see T094. Install via 'npm i -g @openapitools/openapi-generator-cli'."; then
-    OPENAPI_GENERATOR_VERSION="$OPENAPI_GENERATOR_VERSION" openapi-generator generate \
+  # The binary installed by @openapitools/openapi-generator-cli is `openapi-generator-cli`,
+  # NOT `openapi-generator`. This branch had never executed — it is gated on Dart source
+  # existing, and none did until the app was scaffolded — so the wrong name sat here looking
+  # correct. The first run that reached it would have failed the drift gate on a missing tool.
+  if require_tool openapi-generator-cli "Requires a JRE; see T094. Install via 'npm i -g @openapitools/openapi-generator-cli'."; then
+    DART_CLIENT="$ROOT_DIR/mobile/optipulse_app/lib/core/generated"
+
+    # Wipe before generating. openapi-generator writes files but never removes ones that are
+    # no longer produced: when tags were added to the API, the previous single
+    # opti_pulse_api_api.dart stopped being exported yet stayed on disk as committed dead
+    # code that nothing referenced and no gate could notice. Regenerating into a clean
+    # directory makes the output a function of the spec alone.
+    rm -rf "$DART_CLIENT"
+
+    openapi-generator-cli generate \
       -i "$OPENAPI_OUT" -g dart-dio \
-      -o "$ROOT_DIR/mobile/optipulse_app/lib/core/generated"
+      -o "$DART_CLIENT"
+
+    # Assert the pin was honoured. A pin nobody verifies is how 7.11.0 sat in this script
+    # while 7.24.0 did the work: the drift gate stayed green because both sides of the diff
+    # came from the same wrong version.
+    ACTUAL_VERSION="$(cat "$DART_CLIENT/.openapi-generator/VERSION")"
+    if [ "$ACTUAL_VERSION" != "$OPENAPI_GENERATOR_VERSION" ]; then
+      echo "ERROR: generated with openapi-generator $ACTUAL_VERSION, expected $OPENAPI_GENERATOR_VERSION." >&2
+      echo "       Update openapitools.json and this script together, then regenerate." >&2
+      exit 1
+    fi
+
+    # The generator hardcodes `sdk: '>=2.18.0 <4.0.0'` in the client's pubspec. That pins the
+    # package to Dart language version 2.18 while the app is on 3.12, and the built_value
+    # parts then fail to compile with "the language version override has to be the same in
+    # the library and its part(s)". Align it with the app's floor.
+    python3 - "$DART_CLIENT/pubspec.yaml" <<'NORMALISE'
+import re, sys
+path = sys.argv[1]
+with open(path) as f:
+    text = f.read()
+text, n = re.subn(r"sdk: '>=2\.18\.0 <4\.0\.0'", "sdk: '>=3.12.0 <4.0.0'", text)
+assert n == 1, f"expected one SDK constraint to rewrite, found {n}"
+with open(path, "w") as f:
+    f.write(text)
+NORMALISE
+
+    # dart-dio emits built_value classes whose serialisers live in .g.dart parts that only
+    # build_runner can produce. Without this step the client does not compile, so the
+    # generated tree is committed in a state no one can build — and the drift gate would
+    # still pass, because the spec and the emitted sources agree.
+    if require_tool dart "Install the Flutter SDK (which bundles Dart); see mobile/optipulse_app/README.md."; then
+      (cd "$DART_CLIENT" \
+        && dart pub get \
+        && dart run build_runner build --delete-conflicting-outputs)
+    fi
   fi
 else
   echo "NOTE: Flutter client has no Dart source yet (scaffold; T063-T077)." >&2

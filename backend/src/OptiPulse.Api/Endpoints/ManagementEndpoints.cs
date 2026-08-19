@@ -23,7 +23,11 @@ public static class ManagementEndpoints
     {
         var group = app.MapGroup($"{ApiVersioning.RoutePrefix}/flags")
             .WithApiVersionSet(versionSet)
-            .MapToApiVersion(ApiVersioning.V1);
+            .MapToApiVersion(ApiVersioning.V1)
+            // Tags group the generated clients. Without them every operation lands in a
+            // single god-class (OptiPulseApiApi) in the Dart client, which the mobile app
+            // then has to import wholesale to call one endpoint.
+            .WithTags("Flags");
 
         group.MapGet("/", async (FlagManagementService service, CancellationToken ct) =>
         {
