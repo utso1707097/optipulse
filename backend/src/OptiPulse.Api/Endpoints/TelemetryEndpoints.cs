@@ -45,6 +45,8 @@ public static class TelemetryEndpoints
                 Recorded: result.Value.Recorded, Duplicate: result.Value.Duplicate));
         })
         .WithName("RecordConversion")
+        .Produces<ConversionResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
         .RequireAuthorization(AuthConfiguration.ServiceAccountPolicy);
 
         group.MapGet("/flags/{key}/exposures", async (
@@ -73,6 +75,7 @@ public static class TelemetryEndpoints
                 key, totalExposures, conversions.Sum(c => c.Conversions), byVariant));
         })
         .WithName("GetFlagExposures")
+        .Produces<FlagExposureResponse>(StatusCodes.Status200OK)
         .RequireAuthorization(AuthConfiguration.AnyRolePolicy);
 
         return app;

@@ -10,13 +10,13 @@
  * that forgets the variable fails loudly against its own origin rather than silently pointing
  * at a hardcoded host belonging to someone else's environment.
  */
-const configured = import.meta.env.VITE_API_URL?.trim() ?? '';
+const configured = import.meta.env.VITE_API_URL?.trim() ?? "";
 
 // Trailing slashes are stripped so callers can always write `${API_BASE_URL}/api/v1/...`
 // without producing a double slash, which some routers treat as a different path.
-export const API_BASE_URL = configured.replace(/\/+$/, '');
+export const API_BASE_URL = configured.replace(/\/+$/, "");
 
 export function apiUrl(path: string): string {
-  const normalised = path.startsWith('/') ? path : `/${path}`;
+  const normalised = path.startsWith("/") ? path : `/${path}`;
   return `${API_BASE_URL}${normalised}`;
 }

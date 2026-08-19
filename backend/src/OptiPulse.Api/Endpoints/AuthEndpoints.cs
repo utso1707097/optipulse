@@ -50,6 +50,8 @@ public static class AuthEndpoints
             return Results.Ok(ToResponse(tokens));
         })
         .WithName("Login")
+        .Produces<LoginResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
         .AllowAnonymous();
 
         group.MapPost("/refresh", async (
@@ -67,6 +69,8 @@ public static class AuthEndpoints
                 : Results.Ok(ToResponse(result.Value));
         })
         .WithName("Refresh")
+        .Produces<LoginResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
         .AllowAnonymous();
 
         group.MapPost("/logout", async (
@@ -78,6 +82,7 @@ public static class AuthEndpoints
             return Results.NoContent();
         })
         .WithName("Logout")
+        .Produces(StatusCodes.Status204NoContent)
         .AllowAnonymous(); // the refresh token itself is the credential here
 
         group.MapGet("/me", (ClaimsPrincipal principal) =>
@@ -97,6 +102,7 @@ public static class AuthEndpoints
                 Claim(principal, ClaimTypes.Email, "email")));
         })
         .WithName("Me")
+        .Produces<MeResponse>(StatusCodes.Status200OK)
         .RequireAuthorization(AuthConfiguration.AnyRolePolicy);
 
         return app;

@@ -36,7 +36,8 @@ public static class EvaluationEndpoints
 
             return Results.Ok(ToResponse(request.FlagKey, result));
         })
-        .WithName("Evaluate");
+        .WithName("Evaluate")
+        .Produces<EvaluateResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/evaluate/batch", (
             BatchEvaluateRequest request,
@@ -58,14 +59,16 @@ public static class EvaluationEndpoints
 
             return Results.Ok(new BatchEvaluateResponse(results, snapshotVersion));
         })
-        .WithName("EvaluateBatch");
+        .WithName("EvaluateBatch")
+        .Produces<BatchEvaluateResponse>(StatusCodes.Status200OK);
 
         group.MapGet("/snapshot/version", (ISnapshotStore snapshotStore) =>
         {
             var snapshot = snapshotStore.Current;
             return Results.Ok(new SnapshotVersionResponse(snapshot.Version, snapshot.BuiltAt));
         })
-        .WithName("GetSnapshotVersion");
+        .WithName("GetSnapshotVersion")
+        .Produces<SnapshotVersionResponse>(StatusCodes.Status200OK);
 
         // T041 / T041a — REQUIRED CREDENTIAL for this group: a service-account key
         // (X-OptiPulse-Key), enforced by AuthConfiguration.ServiceAccountPolicy above.

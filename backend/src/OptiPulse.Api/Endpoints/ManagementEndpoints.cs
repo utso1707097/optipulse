@@ -31,6 +31,7 @@ public static class ManagementEndpoints
             return Results.Ok(flags.Select(ToResponse).ToArray());
         })
         .WithName("ListFlags")
+        .Produces<FlagResponse[]>(StatusCodes.Status200OK)
         .RequireAuthorization(AuthConfiguration.AnyRolePolicy);
 
         group.MapGet("/{key}", async (string key, FlagManagementService service, CancellationToken ct) =>
@@ -39,6 +40,8 @@ public static class ManagementEndpoints
             return flag is null ? NotFound(key) : Results.Ok(ToResponse(flag));
         })
         .WithName("GetFlag")
+        .Produces<FlagResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization(AuthConfiguration.AnyRolePolicy);
 
         group.MapPost("/", async (
@@ -56,6 +59,9 @@ public static class ManagementEndpoints
                 : Results.Created($"/api/v1/flags/{result.Value.Key}", ToResponse(result.Value));
         })
         .WithName("CreateFlag")
+        .Produces<FlagResponse>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
         .RequireAuthorization(AuthConfiguration.ManagerPolicy);
 
         group.MapPut("/{key}", async (
@@ -84,6 +90,11 @@ public static class ManagementEndpoints
             return result.IsFailure ? Problem(result.Error) : Results.Ok(ToResponse(result.Value));
         })
         .WithName("UpdateFlag")
+        .Produces<FlagResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+        .ProducesProblem(StatusCodes.Status428PreconditionRequired)
         .RequireAuthorization(AuthConfiguration.ManagerPolicy);
 
         group.MapPost("/{key}/status", async (
@@ -103,6 +114,9 @@ public static class ManagementEndpoints
             return result.IsFailure ? Problem(result.Error) : Results.Ok(ToResponse(result.Value));
         })
         .WithName("ChangeFlagStatus")
+        .Produces<FlagResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
         .RequireAuthorization(AuthConfiguration.ManagerPolicy);
 
         group.MapPost("/{key}/kill-switch", async (
@@ -116,6 +130,8 @@ public static class ManagementEndpoints
             return result.IsFailure ? Problem(result.Error) : Results.Ok(ToResponse(result.Value));
         })
         .WithName("SetKillSwitch")
+        .Produces<FlagResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization(AuthConfiguration.AdminPolicy);
 
         return app;

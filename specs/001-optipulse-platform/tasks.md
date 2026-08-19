@@ -41,13 +41,13 @@ gaps found in work already built.
 | 3 | **Phase 3** | Real-Time Flag Evaluation for Applications | T018–T031 | ✅ |
 | 4 | **Phase 4** | Authentication & Role-Based Access Control | T032–T041a | ✅ |
 | 5 | **Phase 4a** | Constitution v2.2.0 Remediation | T091–T095 | 4/5 |
-| 6 | **Phase 5** | Manager Web Dashboard: Flags, Experiments, Micro-Copy & Analytics | T042–T062 | 9/21 |
-| 7 | **Phase 5a** | Deployment Enablement | T096–T100 | 0/5 |
+| 6 | **Phase 5** | Manager Web Dashboard: Flags, Experiments, Micro-Copy & Analytics | T042–T062 | 18/22 (4 deferred) |
+| 7 | **Phase 5a** | Deployment Enablement | T096–T100 | ✅ |
 | 8 | **Phase 6** | Admin & DevOps Mobile App: Telemetry, Push Alerts & Instant Kill-Switch | T063–T077 | 0/15 |
 | 9 | **Phase 7** | Immutable Audit Trail | T078–T083 | 0/6 |
 | 10 | **Phase 8** | Polish & Cross-Cutting Concerns | T084–T090 | 0/7 |
 
-**Where you are now**: Phases 1–4 complete. Phase 4a complete. Phase 5 backend complete (flags, experiments, analytics); its React screens and Phase 5a remain. The AI Gateway (T043, T052–T054) is deferred post-MVP.
+**Where you are now**: Phases 1–4, 4a, 5 and 5a complete apart from the deferred AI Gateway work. The React dashboard ships Flags, Experiments and Analytics on Redux Toolkit + Tailwind. Next up: Phase 6 (Flutter app), then Phases 7–8. The AI Gateway (T043, T052–T054, T060) is deferred post-MVP.
 ---
 
 ## Phase 1: Setup (Shared Infrastructure)
@@ -183,7 +183,7 @@ second client land.
 - [X] T042 [P] [US3] Contract tests for management API (flags CRUD, versioning/If-Match concurrency, experiments, kill-switch) per [contracts/management-api.md](contracts/management-api.md) in `backend/tests/OptiPulse.IntegrationTests/Management/ManagementApiTests.cs`
 - [ ] T043 [P] [US3] Contract tests for AI Gateway (generate, review/approve, attach-only-approved, degraded provider) per [contracts/ai-gateway-api.md](contracts/ai-gateway-api.md) in `backend/tests/OptiPulse.IntegrationTests/Ai/AiGatewayApiTests.cs` ⏸️ **DEFERRED post-MVP** (product decision, 2026-08-18): the AI Gateway is not part of the MVP. Micro-copy is authored by hand until it lands; the human approval gate (FR-016) stays as specified and is the behaviour a future AI Gateway must slot behind, not replace.
 - [X] T044 [P] [US3] Integration test: concurrent-edit conflict returns 409 without silent overwrite in `backend/tests/OptiPulse.IntegrationTests/Management/ConcurrencyTests.cs`
-- [ ] T045 [P] [US3] React hook/component tests (useFlags, useAuth, flag-create flow) in `web/optipulse_dashboard/test/`
+- [X] T045 [P] [US3] React store/component tests (auth slice, API client incl. refresh-once-on-401, flags slice, flag-create flow, ConnectivityGuard) in `web/optipulse_dashboard/test/`
 
 ### Implementation for User Story 3 — Backend (Flag Management + AI Gateway)
 
@@ -200,15 +200,14 @@ second client land.
 
 ### Implementation for User Story 3 — React Web Dashboard
 
-- [ ] T056 [US3] Generate TypeScript types + typed client from `openapi.json` into `web/optipulse_dashboard/src/api/` (via `contracts-gen/generate.sh`)
-- [ ] T057 [P] [US3] Implement the auth slice (opaque session, silent refresh) with Redux Toolkit in `web/optipulse_dashboard/src/store/authSlice.ts` — constitution v2.4.0 replaced the AuthContext pin with Redux Toolkit. The token stays opaque to the client and no authorization decision is made here (Principle VI)
-- [ ] T058 [P] [US3] Implement `flags`, `experiments` and `analytics` slices + typed hooks over the generated client in `web/optipulse_dashboard/src/store/` and `src/hooks/`. Slices hold fetched data for rendering only — the backend stays the source of truth and is re-read rather than reconciled against (constitution v2.4.0)
-- [ ] T059 [US3] Build Flags + Experiments management screens with **Tailwind CSS** in `web/optipulse_dashboard/src/features/{flags,experiments}/` (depends on T056–T058)
-- [ ] T060 [US3] Build Micro-Copy generation/approval screen in `web/optipulse_dashboard/src/features/microcopy/`
-- [ ] T061 [US3] Build Analytics review screen in `web/optipulse_dashboard/src/features/analytics/`
-- [ ] T062 [US3] Implement always-online guard (clear "requires connectivity" state, no stale editable state) in `web/optipulse_dashboard/src/components/ConnectivityGuard.tsx`
-
-- [ ] T056a [P] [US3] Install and configure **Tailwind CSS** + **Redux Toolkit** in `web/optipulse_dashboard/` (constitution v2.4.0), including the store wiring in `src/main.tsx`
+- [X] T056a [P] [US3] Install and configure **Tailwind CSS** (v4, via `@tailwindcss/vite`; design tokens in the `@theme` block of `src/index.css`, no `tailwind.config.js`) + **Redux Toolkit**, `react-redux` and `react-router-dom` in `web/optipulse_dashboard/`, including the store and auth-bridge wiring in `src/main.tsx` (constitution v2.4.0)
+- [X] T056 [US3] Generate TypeScript types + typed client from `openapi.json` into `web/optipulse_dashboard/src/api/` (via `contracts-gen/generate.sh`). Also required declaring response schemas (`.Produces<T>()`) on every endpoint — before that the document carried request bodies only, so the generated client was `unknown` on the way out
+- [X] T057 [P] [US3] Implement the auth slice (opaque session, silent refresh) with Redux Toolkit in `web/optipulse_dashboard/src/store/authSlice.ts` — constitution v2.4.0 replaced the AuthContext pin with Redux Toolkit. The token stays opaque to the client and no authorization decision is made here (Principle VI)
+- [X] T058 [P] [US3] Implement `flags`, `experiments` and `analytics` slices + typed hooks over the generated client in `web/optipulse_dashboard/src/store/` and `src/hooks/`. Slices hold fetched data for rendering only — the backend stays the source of truth and is re-read rather than reconciled against (constitution v2.4.0)
+- [X] T059 [US3] Build Flags + Experiments management screens with **Tailwind CSS** in `web/optipulse_dashboard/src/features/{flags,experiments}/` (depends on T056–T058)
+- [ ] T060 [US3] Build Micro-Copy generation/approval screen in `web/optipulse_dashboard/src/features/microcopy/` ⏸️ **DEFERRED post-MVP** (product decision, 2026-08-18): the AI Gateway is not part of the MVP. Micro-copy is authored by hand until it lands; the human approval gate (FR-016) stays as specified and is the behaviour a future AI Gateway must slot behind, not replace. No screen is shipped rather than one wired to an endpoint that does not exist
+- [X] T061 [US3] Build Analytics review screen in `web/optipulse_dashboard/src/features/analytics/`
+- [X] T062 [US3] Implement always-online guard (clear "requires connectivity" state, no stale editable state) in `web/optipulse_dashboard/src/components/ConnectivityGuard.tsx` — the guard REPLACES the work area when offline rather than dimming it, so no stale editable state remains on screen
 
 **Checkpoint**: Managers can run the full authoring→experiment→analytics loop on the web dashboard. (Micro-copy is deferred with the AI Gateway.)
 
