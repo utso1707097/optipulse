@@ -6,6 +6,8 @@ import 'package:optipulse_app/features/killswitch/domain/flag_repository.dart';
 import 'package:optipulse_app/features/killswitch/domain/kill_switch_intent.dart';
 import 'package:optipulse_app/features/killswitch/presentation/kill_switch_cubit.dart';
 
+import '../../support/memory_storage.dart';
+
 class _MockFlagRepository extends Mock implements FlagRepository {}
 
 Flag _flag({bool killed = false, int version = 1}) => Flag(
@@ -19,7 +21,11 @@ Flag _flag({bool killed = false, int version = 1}) => Flag(
 void main() {
   late _MockFlagRepository repository;
 
-  setUp(() => repository = _MockFlagRepository());
+  setUp(() {
+    repository = _MockFlagRepository();
+    // KillSwitchCubit is a HydratedCubit; without storage it throws at construction.
+    useMemoryStorage();
+  });
 
   group('loadFlags', () {
     blocTest<KillSwitchCubit, KillSwitchState>(

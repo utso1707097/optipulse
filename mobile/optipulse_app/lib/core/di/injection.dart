@@ -11,6 +11,7 @@ import '../../features/killswitch/data/flag_repository_impl.dart';
 import '../../features/killswitch/domain/flag_repository.dart';
 import '../../features/killswitch/presentation/kill_switch_cubit.dart';
 import '../network/api_client.dart';
+import '../reconcile/connectivity_monitor.dart';
 
 final getIt = GetIt.instance;
 
@@ -71,7 +72,11 @@ Future<void> configureDependencies() async {
     () => FlagRepositoryImpl(getIt<Openapi>().getFlagsApi()),
   );
 
-  getIt.registerFactory<KillSwitchCubit>(() => KillSwitchCubit(getIt()));
+  getIt.registerLazySingleton<ConnectivityMonitor>(ConnectivityPlusMonitor.new);
+
+  getIt.registerFactory<KillSwitchCubit>(
+    () => KillSwitchCubit(getIt(), connectivity: getIt<ConnectivityMonitor>()),
+  );
 }
 
 /// Convenience for features that only need a session-aware client.

@@ -34,6 +34,40 @@ class Flag extends Equatable {
         version: version ?? this.version,
       );
 
+  /// Persisted so the app can show last-known flag state before the network answers, and so
+  /// reconciliation has something to compare against after a cold start (FR-028).
+  Map<String, dynamic> toJson() => {
+        'key': key,
+        'name': name,
+        'status': status,
+        'killSwitchEngaged': killSwitchEngaged,
+        'version': version,
+      };
+
+  static Flag? fromJson(Map<String, dynamic> json) {
+    final key = json['key'];
+    final name = json['name'];
+    final status = json['status'];
+    final engaged = json['killSwitchEngaged'];
+    final version = json['version'];
+
+    // Anything malformed is dropped rather than defaulted. Inventing a killSwitchEngaged value
+    // for a half-written record would mean fabricating the one fact this screen exists to
+    // report.
+    if (key is! String || name is! String || status is! String ||
+        engaged is! bool || version is! int) {
+      return null;
+    }
+
+    return Flag(
+      key: key,
+      name: name,
+      status: status,
+      killSwitchEngaged: engaged,
+      version: version,
+    );
+  }
+
   @override
   List<Object?> get props => [key, name, status, killSwitchEngaged, version];
 }

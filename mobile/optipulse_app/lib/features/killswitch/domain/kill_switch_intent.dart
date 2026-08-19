@@ -50,6 +50,40 @@ class KillSwitchIntent extends Equatable {
         error: error,
       );
 
+  /// Persisted so an unsent decision survives the app being killed. Without this, an admin who
+  /// engages a kill switch on a train, loses signal and has the OS reclaim the app has simply
+  /// lost the action — which is the failure this whole type exists to prevent.
+  Map<String, dynamic> toJson() => {
+        'flagKey': flagKey,
+        'engage': engage,
+        // A pending intent is restored as FAILED, not pending: the request that was in flight
+        // died with the process, so nothing is waiting on it. Restoring it as pending would
+        // show a spinner for a request nobody is making.
+        'state': (state == IntentState.pending ? IntentState.failed : state).name,
+        'requestedAt': requestedAt.toIso8601String(),
+        'error': error,
+      };
+
+  static KillSwitchIntent? fromJson(Map<String, dynamic> json) {
+    final flagKey = json['flagKey'];
+    final engage = json['engage'];
+    final requestedAt = DateTime.tryParse(json['requestedAt'] as String? ?? '');
+    if (flagKey is! String || engage is! bool || requestedAt == null) return null;
+
+    final state = IntentState.values.firstWhere(
+      (candidate) => candidate.name == json['state'],
+      orElse: () => IntentState.failed,
+    );
+
+    return KillSwitchIntent(
+      flagKey: flagKey,
+      engage: engage,
+      state: state,
+      requestedAt: requestedAt,
+      error: json['error'] as String?,
+    );
+  }
+
   @override
   List<Object?> get props => [flagKey, engage, state, requestedAt, error];
 }

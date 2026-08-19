@@ -38,6 +38,7 @@ dependencies:
   openapi:
     path: lib/core/generated
   flutter_secure_storage: ^11.0.0
+  connectivity_plus: ^7.3.1
 
 dev_dependencies:
   flutter_test:

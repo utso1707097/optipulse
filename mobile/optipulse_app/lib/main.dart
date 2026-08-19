@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'core/di/injection.dart';
 import 'features/auth/presentation/auth_cubit.dart';
@@ -9,6 +11,17 @@ import 'features/killswitch/presentation/kill_switch_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Backs KillSwitchCubit's persistence. Application-support rather than temporary storage:
+  // an unsent kill-switch decision must not be something the OS can reclaim under disk
+  // pressure. It is not secret — it is a flag key and a boolean — so it does not belong in the
+  // keystore alongside tokens.
+  HydratedBloc.storage = await HydratedStorage.build(
+    storageDirectory: HydratedStorageDirectory(
+      (await getApplicationSupportDirectory()).path,
+    ),
+  );
+
   await configureDependencies();
   runApp(const OptiPulseApp());
 }

@@ -14,8 +14,19 @@ class KillSwitchScreen extends StatelessWidget {
 
     return BlocBuilder<KillSwitchCubit, KillSwitchState>(
       builder: (context, state) {
-        return RefreshIndicator(
-          onRefresh: () => context.read<KillSwitchCubit>().loadFlags(),
+        return Column(
+          children: [
+            if (!state.isOnline) const _OfflineBanner(),
+            Expanded(child: _body(context, state, isAdmin)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _body(BuildContext context, KillSwitchState state, bool isAdmin) {
+    return RefreshIndicator(
+          onRefresh: () => context.read<KillSwitchCubit>().reconcileWithServer(),
           child: switch (state.status) {
             FlagsStatus.initial || FlagsStatus.loading =>
               const Center(child: CircularProgressIndicator()),
@@ -33,7 +44,39 @@ class KillSwitchScreen extends StatelessWidget {
               ),
           },
         );
-      },
+  }
+}
+
+/// Shown while the device reports no network path.
+///
+/// It says actions are QUEUED rather than blocked, because that is what happens: the controls
+/// stay live, the attempt is still made, and anything that does not land is kept. Greying the
+/// screen out would be both a lie and an obstruction — connectivity reports are a hint, and an
+/// admin in a basement during an incident should still be able to press the button.
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      color: theme.colorScheme.tertiaryContainer,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_off, size: 18, color: theme.colorScheme.onTertiaryContainer),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Offline — actions are kept and sent when the connection returns.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onTertiaryContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -150,7 +193,8 @@ class _IntentBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final intent = state.intents[flagKey]!;
-    final failed = intent.isFailed;
+    final conflicted = state.conflicts.contains(flagKey);
+    final failed = intent.isFailed || conflicted;
 
     return Container(
       width: double.infinity,
@@ -171,9 +215,11 @@ class _IntentBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              failed
-                  ? '${intent.engage ? 'Engage' : 'Release'} failed — ${intent.error}'
-                  : '${intent.engage ? 'Engaging' : 'Releasing'}…',
+              conflicted
+                  ? 'Someone engaged this kill switch after you asked to release it.'
+                  : failed
+                      ? '${intent.engage ? 'Engage' : 'Release'} failed — ${intent.error}'
+                      : '${intent.engage ? 'Engaging' : 'Releasing'}…',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: failed
                     ? theme.colorScheme.onErrorContainer
@@ -181,7 +227,19 @@ class _IntentBanner extends StatelessWidget {
               ),
             ),
           ),
-          if (failed) ...[
+          if (conflicted) ...[
+            // A conflict is not a failed request, so it does not offer Retry. The server has
+            // engaged this kill switch since the release was asked for; re-sending the release
+            // is a decision to override that, and it should be made deliberately.
+            TextButton(
+              onPressed: () => context.read<KillSwitchCubit>().retry(flagKey),
+              child: const Text('Release anyway'),
+            ),
+            TextButton(
+              onPressed: () => context.read<KillSwitchCubit>().acceptServerState(flagKey),
+              child: const Text('Keep killed'),
+            ),
+          ] else if (failed) ...[
             TextButton(
               onPressed: () => context.read<KillSwitchCubit>().retry(flagKey),
               child: const Text('Retry'),
