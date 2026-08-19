@@ -12,6 +12,11 @@ void main() {
       // TODO
     });
 
+    //Future<LiveTelemetryResponse> getLiveTelemetry() async
+    test('test getLiveTelemetry', () async {
+      // TODO
+    });
+
     //Future<ConversionResponse> recordConversion(ConversionRequest conversionRequest) async
     test('test recordConversion', () async {
       // TODO

@@ -121,6 +121,16 @@ try
     builder.Services.AddScoped<IExposureAggregator, ExposureAggregator>();
     builder.Services.AddScoped<IConversionRecorder, ConversionRecorder>();
 
+    // Alerting (T067-T070). The notifier is the LOGGING one by default: push is a delivery
+    // optimisation over a durable history that is already the source of truth, so a deployment
+    // with no Firebase project is still a complete alerting system read in-app. An FCM/APNs
+    // implementation replaces this single registration and must wrap its outbound HTTP in a
+    // Polly pipeline like every other outbound dependency.
+    builder.Services.AddScoped<IAlertStore, AlertStore>();
+    builder.Services.AddScoped<IAlertNotifier, LoggingAlertNotifier>();
+    builder.Services.AddScoped<AlertDispatcher>();
+    builder.Services.AddScoped<IOperationalAlerter, OptiPulse.Api.Adapters.OperationalAlerter>();
+
     builder.Services.AddOptiPulseRedis(builder.Configuration);
     builder.Services.AddOptiPulseResilience();
 
@@ -168,6 +178,7 @@ try
     app.MapManagementEndpoints(versionSet);
     app.MapExperimentEndpoints(versionSet);
     app.MapTelemetryEndpoints(versionSet);
+    app.MapAlertsEndpoints(versionSet);
 
     await BootstrapAsync(app);
     await BootstrapSeeder.SeedAsync(app);

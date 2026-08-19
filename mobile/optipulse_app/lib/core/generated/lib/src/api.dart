@@ -9,6 +9,7 @@ import 'package:openapi/src/auth/api_key_auth.dart';
 import 'package:openapi/src/auth/basic_auth.dart';
 import 'package:openapi/src/auth/bearer_auth.dart';
 import 'package:openapi/src/auth/oauth.dart';
+import 'package:openapi/src/api/alerts_api.dart';
 import 'package:openapi/src/api/authentication_api.dart';
 import 'package:openapi/src/api/evaluation_api.dart';
 import 'package:openapi/src/api/experiments_api.dart';
@@ -107,6 +108,12 @@ class Openapi {
     if (this.dio.interceptors.any((i) => i is ApiKeyAuthInterceptor)) {
       (this.dio.interceptors.firstWhere((element) => element is ApiKeyAuthInterceptor) as ApiKeyAuthInterceptor).apiKeys.remove(name);
     }
+  }
+
+  /// Get AlertsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AlertsApi getAlertsApi() {
+    return AlertsApi(dio, serializers);
   }
 
   /// Get AuthenticationApi instance, base route and serializer can be overridden by a given but be careful,

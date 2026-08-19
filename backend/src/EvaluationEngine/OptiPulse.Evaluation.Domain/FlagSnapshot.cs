@@ -26,6 +26,15 @@ public sealed class FlagSnapshot
 
     public bool TryGetFlag(string flagKey, out CompiledFlag? flag) => _flags.TryGetValue(flagKey, out flag);
 
+    /// <summary>
+    /// Read surface for operational reporting (T071). Not used by the evaluation path — that
+    /// goes through <see cref="TryGetFlag"/>, which stays a single FrozenDictionary lookup with
+    /// no enumeration and no allocation.
+    /// </summary>
+    public int Count => _flags.Count;
+
+    public IReadOnlyCollection<CompiledFlag> Flags => _flags.Values;
+
     /// <summary>Returns a new snapshot with the given flag replaced/added and the
     /// version advanced — used to apply a single-flag delta (invalidation
     /// subscriber) without rebuilding the whole snapshot from scratch.</summary>

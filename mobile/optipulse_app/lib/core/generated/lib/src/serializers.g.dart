@@ -8,6 +8,7 @@ part of 'serializers.dart';
 
 Serializers _$serializers =
     (Serializers().toBuilder()
+          ..add(AlertResponse.serializer)
           ..add(BatchEvaluateRequest.serializer)
           ..add(BatchEvaluateResponse.serializer)
           ..add(ChangeStatusRequest.serializer)
@@ -21,11 +22,14 @@ Serializers _$serializers =
           ..add(FlagExposureResponse.serializer)
           ..add(FlagResponse.serializer)
           ..add(KillSwitchRequest.serializer)
+          ..add(LiveTelemetryResponse.serializer)
           ..add(LoginRequest.serializer)
           ..add(LoginResponse.serializer)
           ..add(MeResponse.serializer)
           ..add(ProblemDetails.serializer)
           ..add(RefreshRequest.serializer)
+          ..add(RegisterDeviceRequest.serializer)
+          ..add(RegisterDeviceResponse.serializer)
           ..add(RolloutDto.serializer)
           ..add(SnapshotVersionResponse.serializer)
           ..add(TargetingRuleDto.serializer)

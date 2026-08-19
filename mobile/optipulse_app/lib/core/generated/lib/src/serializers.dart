@@ -14,6 +14,7 @@ import 'package:built_value/iso_8601_date_time_serializer.dart';
 import 'package:openapi/src/date_serializer.dart';
 import 'package:openapi/src/model/date.dart';
 
+import 'package:openapi/src/model/alert_response.dart';
 import 'package:openapi/src/model/batch_evaluate_request.dart';
 import 'package:openapi/src/model/batch_evaluate_response.dart';
 import 'package:openapi/src/model/change_status_request.dart';
@@ -27,11 +28,14 @@ import 'package:openapi/src/model/experiment_response.dart';
 import 'package:openapi/src/model/flag_exposure_response.dart';
 import 'package:openapi/src/model/flag_response.dart';
 import 'package:openapi/src/model/kill_switch_request.dart';
+import 'package:openapi/src/model/live_telemetry_response.dart';
 import 'package:openapi/src/model/login_request.dart';
 import 'package:openapi/src/model/login_response.dart';
 import 'package:openapi/src/model/me_response.dart';
 import 'package:openapi/src/model/problem_details.dart';
 import 'package:openapi/src/model/refresh_request.dart';
+import 'package:openapi/src/model/register_device_request.dart';
+import 'package:openapi/src/model/register_device_response.dart';
 import 'package:openapi/src/model/rollout_dto.dart';
 import 'package:openapi/src/model/snapshot_version_response.dart';
 import 'package:openapi/src/model/targeting_rule_dto.dart';
@@ -43,6 +47,7 @@ import 'package:openapi/src/model/variant_exposure_dto.dart';
 part 'serializers.g.dart';
 
 @SerializersFor([
+  AlertResponse,
   BatchEvaluateRequest,
   BatchEvaluateResponse,
   ChangeStatusRequest,
@@ -56,11 +61,14 @@ part 'serializers.g.dart';
   FlagExposureResponse,
   FlagResponse,
   KillSwitchRequest,
+  LiveTelemetryResponse,
   LoginRequest,
   LoginResponse,
   MeResponse,
   ProblemDetails,
   RefreshRequest,
+  RegisterDeviceRequest,
+  RegisterDeviceResponse,
   RolloutDto,
   SnapshotVersionResponse,
   TargetingRuleDto,
@@ -77,6 +85,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(EvaluateResponse)]),
         () => ListBuilder<EvaluateResponse>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AlertResponse)]),
+        () => ListBuilder<AlertResponse>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ExperimentResponse)]),

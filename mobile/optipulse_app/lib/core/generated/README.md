@@ -47,14 +47,14 @@ Please follow the [installation procedure](#installation--usage) and then run th
 import 'package:openapi/openapi.dart';
 
 
-final api = Openapi().getAuthenticationApi();
-final LoginRequest loginRequest = ; // LoginRequest | 
+final api = Openapi().getAlertsApi();
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | 
 
 try {
-    final response = await api.login(loginRequest);
+    final response = await api.acknowledgeAlert(id);
     print(response);
 } on DioException catch (e) {
-    print("Exception when calling AuthenticationApi->login: $e\n");
+    print("Exception when calling AlertsApi->acknowledgeAlert: $e\n");
 }
 
 ```
@@ -65,6 +65,10 @@ All URIs are relative to *http://localhost*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+[*AlertsApi*](doc/AlertsApi.md) | [**acknowledgeAlert**](doc/AlertsApi.md#acknowledgealert) | **POST** /api/v1/alerts/{id}/ack | 
+[*AlertsApi*](doc/AlertsApi.md) | [**listAlerts**](doc/AlertsApi.md#listalerts) | **GET** /api/v1/alerts | 
+[*AlertsApi*](doc/AlertsApi.md) | [**registerPushDevice**](doc/AlertsApi.md#registerpushdevice) | **POST** /api/v1/alerts/devices | 
+[*AlertsApi*](doc/AlertsApi.md) | [**revokePushDevice**](doc/AlertsApi.md#revokepushdevice) | **POST** /api/v1/alerts/devices/revoke | 
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**login**](doc/AuthenticationApi.md#login) | **POST** /api/v1/auth/login | 
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**logout**](doc/AuthenticationApi.md#logout) | **POST** /api/v1/auth/logout | 
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**me**](doc/AuthenticationApi.md#me) | **GET** /api/v1/auth/me | 
@@ -84,11 +88,13 @@ Class | Method | HTTP request | Description
 [*FlagsApi*](doc/FlagsApi.md) | [**setKillSwitch**](doc/FlagsApi.md#setkillswitch) | **POST** /api/v1/flags/{key}/kill-switch | 
 [*FlagsApi*](doc/FlagsApi.md) | [**updateFlag**](doc/FlagsApi.md#updateflag) | **PUT** /api/v1/flags/{key} | 
 [*TelemetryApi*](doc/TelemetryApi.md) | [**getFlagExposures**](doc/TelemetryApi.md#getflagexposures) | **GET** /api/v1/telemetry/flags/{key}/exposures | 
+[*TelemetryApi*](doc/TelemetryApi.md) | [**getLiveTelemetry**](doc/TelemetryApi.md#getlivetelemetry) | **GET** /api/v1/telemetry/live | 
 [*TelemetryApi*](doc/TelemetryApi.md) | [**recordConversion**](doc/TelemetryApi.md#recordconversion) | **POST** /api/v1/telemetry/conversions | 
 
 
 ## Documentation For Models
 
+ - [AlertResponse](doc/AlertResponse.md)
  - [BatchEvaluateRequest](doc/BatchEvaluateRequest.md)
  - [BatchEvaluateResponse](doc/BatchEvaluateResponse.md)
  - [ChangeStatusRequest](doc/ChangeStatusRequest.md)
@@ -102,11 +108,14 @@ Class | Method | HTTP request | Description
  - [FlagExposureResponse](doc/FlagExposureResponse.md)
  - [FlagResponse](doc/FlagResponse.md)
  - [KillSwitchRequest](doc/KillSwitchRequest.md)
+ - [LiveTelemetryResponse](doc/LiveTelemetryResponse.md)
  - [LoginRequest](doc/LoginRequest.md)
  - [LoginResponse](doc/LoginResponse.md)
  - [MeResponse](doc/MeResponse.md)
  - [ProblemDetails](doc/ProblemDetails.md)
  - [RefreshRequest](doc/RefreshRequest.md)
+ - [RegisterDeviceRequest](doc/RegisterDeviceRequest.md)
+ - [RegisterDeviceResponse](doc/RegisterDeviceResponse.md)
  - [RolloutDto](doc/RolloutDto.md)
  - [SnapshotVersionResponse](doc/SnapshotVersionResponse.md)
  - [TargetingRuleDto](doc/TargetingRuleDto.md)

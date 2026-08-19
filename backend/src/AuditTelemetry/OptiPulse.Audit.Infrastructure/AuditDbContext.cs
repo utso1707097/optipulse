@@ -14,6 +14,8 @@ public sealed class AuditDbContext(DbContextOptions<AuditDbContext> options) : D
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<ExposureEvent> ExposureEvents => Set<ExposureEvent>();
     public DbSet<ConversionEvent> ConversionEvents => Set<ConversionEvent>();
+    public DbSet<Alert> Alerts => Set<Alert>();
+    public DbSet<PushDevice> PushDevices => Set<PushDevice>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +45,39 @@ public sealed class AuditDbContext(DbContextOptions<AuditDbContext> options) : D
             // application code, which would race with a concurrent duplicate.
             builder.HasIndex(e => e.IdempotencyKey).IsUnique();
             builder.HasIndex(e => e.FlagKey);
+        });
+
+        modelBuilder.Entity<Alert>(builder =>
+        {
+            builder.ToTable("Alerts");
+            builder.HasKey(e => e.Id);
+            builder.Property(e => e.Kind).HasConversion<string>().HasMaxLength(40);
+            builder.Property(e => e.Severity).HasConversion<string>().HasMaxLength(20);
+            builder.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            builder.Property(e => e.Detail).IsRequired().HasMaxLength(2000);
+            builder.Property(e => e.DedupeKey).IsRequired().HasMaxLength(300);
+            builder.Property(e => e.FlagKey).HasMaxLength(120);
+            builder.Property(e => e.AcknowledgedBy).HasMaxLength(200);
+
+            // UNIQUE for the same reason ConversionEvents.IdempotencyKey is: detectors evaluate
+            // a STANDING condition on a timer, so a spike lasting ten minutes would otherwise
+            // raise an alert every pass. Enforced by the database rather than a read-then-write,
+            // which would race two detector runs against each other.
+            builder.HasIndex(e => e.DedupeKey).IsUnique();
+            builder.HasIndex(e => e.RaisedAt);
+        });
+
+        modelBuilder.Entity<PushDevice>(builder =>
+        {
+            builder.ToTable("PushDevices");
+            builder.HasKey(e => e.Id);
+            builder.Property(e => e.Platform).HasConversion<string>().HasMaxLength(20);
+            builder.Property(e => e.Token).IsRequired().HasMaxLength(400);
+
+            // One row per token. A device that re-registers the same token must not accumulate
+            // rows, or one alert becomes several notifications to one phone.
+            builder.HasIndex(e => e.Token).IsUnique();
+            builder.HasIndex(e => e.UserId);
         });
 
         modelBuilder.Entity<AuditEntry>(builder =>
