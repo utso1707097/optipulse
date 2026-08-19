@@ -49,7 +49,13 @@ that possible.
 
 7. Dashboard on Vercel: import the repo, root directory `web/optipulse_dashboard`, framework
    Vite, `VITE_API_URL` = your Render URL. Then correct `Cors__AllowedOrigins__0` in Render to
-   the URL Vercel gives you.
+   the URL Vercel gives you. Full walkthrough in [section 6](#6-vercel-dashboard--step-by-step).
+
+8. Verify it end to end:
+
+   ```bash
+   scripts/smoke-deployment.sh https://your-api.onrender.com https://your-dash.vercel.app
+   ```
 
 **What you did not have to do:** create a Neon account, create an Upstash account, copy a
 connection string, or generate a signing key. Render provisions Postgres and Redis, injects their
@@ -174,14 +180,76 @@ Bootstrap service-account key (shown once, not recoverable): opk_...
 Copy it. Only its hash is stored, so it cannot be recovered — losing it means issuing a new
 service account, which is the same property that makes a database leak useless to an attacker.
 
-## 6. Vercel dashboard
+## 6. Vercel dashboard — step by step
 
-Import the repo, root directory `web/optipulse_dashboard`, framework **Vite**.
+You need your Render API URL before starting. It looks like `https://optipulse-api.onrender.com`
+(Render → your web service → the URL at the top). No trailing slash.
 
-Set `VITE_API_URL` to your Render URL (e.g. `https://optipulse-api.onrender.com`).
+### 6.1 Import the project
 
-This must be a **build-time** variable. Vite inlines it into the bundle; a static build has no
-runtime environment to read, so changing it later requires a rebuild, not a restart.
+1. Go to **[vercel.com/new](https://vercel.com/new)** and sign in with GitHub.
+2. Find **optipulse** in the repository list and press **Import**. If it is not listed, press
+   *Adjust GitHub App Permissions* and grant Vercel access to the repo.
+
+### 6.2 Configure it — the screen where mistakes happen
+
+| Field | Value |
+|---|---|
+| **Framework Preset** | **Vite** |
+| **Root Directory** | **`web/optipulse_dashboard`** ← press *Edit* and select it |
+| Build Command | leave default (`npm run build`) |
+| Output Directory | leave default (`dist`) |
+
+**Root Directory is the one people get wrong.** Leave it at the repository root and Vercel finds
+no `package.json`, or builds the wrong thing. It must point at the dashboard folder.
+
+### 6.3 Add the environment variable BEFORE the first deploy
+
+Still on the import screen, expand **Environment Variables** and add:
+
+| Name | Value |
+|---|---|
+| `VITE_API_URL` | your Render URL, e.g. `https://optipulse-api.onrender.com` |
+
+Leave all three environments (Production, Preview, Development) ticked.
+
+**Why it must be set before you build, not after.** Vite *inlines* this value into the JavaScript
+bundle at build time. A static site has no runtime environment to read, so adding the variable
+later changes nothing until you rebuild. Worse, it fails silently: with the variable missing the
+client falls back to same-origin requests, so the dashboard loads perfectly and then every API
+call 404s against Vercel itself — with nothing in the deploy log to tell you why. The smoke test
+in step 8 checks specifically for this.
+
+### 6.4 Deploy
+
+Press **Deploy** and wait ~1 minute. Vercel gives you a URL like
+`https://optipulse-xxxx.vercel.app`. **Copy it.**
+
+Opening it now shows the login screen — and signing in will fail. That is expected: the API does
+not yet trust this origin. That is the next step.
+
+### 6.5 Point CORS at your new dashboard URL
+
+In **Render** → your web service → **Environment**, change:
+
+| Key | Value |
+|---|---|
+| `Cors__AllowedOrigins__0` | your Vercel URL, e.g. `https://optipulse-xxxx.vercel.app` |
+
+It is currently the placeholder `https://example.com`.
+
+The origin must match **exactly** — scheme, host, no trailing slash and no path.
+`https://optipulse.vercel.app/` (trailing slash) does not match `https://optipulse.vercel.app`,
+and the browser will keep blocking every request. A `*` is rejected at startup on purpose.
+
+Save. Render redeploys automatically; give it a couple of minutes.
+
+### Routing and caching
+
+`web/optipulse_dashboard/vercel.json` rewrites all unmatched paths to `index.html`. This is what
+makes `/flags` work when someone refreshes the page or opens a shared link — without it the app
+works while you click through it and 404s the moment anyone reloads. It also sets long-lived
+immutable caching on hashed assets and a few standard security headers.
 
 ## 7. GitHub secrets for automatic deploys
 
@@ -205,14 +273,33 @@ still builds green.
 
 ---
 
-## Verifying it works
+## 8. Verifying it works
+
+Run the smoke test rather than clicking around and hoping:
 
 ```bash
-curl https://YOUR-API.onrender.com/health/ready
-# {"status":"ready","database":"up","snapshotVersion":0}
+scripts/smoke-deployment.sh https://YOUR-API.onrender.com https://YOUR-DASH.vercel.app
 ```
 
-Then log in with the Manager credentials from step 4, create a flag, and activate it.
+It checks the things that only exist once the two halves are deployed to *different origins*, and
+that no local test can reach:
+
+| Check | The failure it catches |
+|---|---|
+| `/health/live`, `/health/ready` | API down, still deploying, or a dependency unreachable |
+| `/api/v1/flags` returns 401 | the management API is publicly readable |
+| `/api/v1/evaluate` returns 401 | the SDK surface accepts callers with no key |
+| CORS preflight allows your exact dashboard origin | **the browser blocks every call before it reaches the server** — the API looks perfectly healthy from `curl` while the dashboard shows nothing but errors |
+| `/flags` deep link returns 200 | no SPA rewrite: works while you click, 404s when anyone refreshes or shares a link |
+| the built bundle references your API host | `VITE_API_URL` was missing at build time — the single easiest way to ship a silently broken dashboard |
+
+It uses **no credentials**. It verifies that protected endpoints *refuse* anonymous callers
+rather than logging in to prove they accept authorised ones — a smoke test that holds a password
+becomes one more secret to protect.
+
+It exits non-zero on any failure, so it works as a CI or post-deploy step too.
+
+Once it is green, log in with the Manager credentials from step 4, create a flag, and activate it.
 
 ## Things that will look broken but are not
 
