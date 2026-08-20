@@ -260,27 +260,65 @@ jobs:
           curl -fsS -X POST "$HOOK" -o response.json
           echo "Triggered: $(cat response.json)"
 
-      - name: Wait for the new instance to report healthy
+      - name: Wait for THIS commit to be the one serving, then check it is healthy
         env:
           BASE: ${{ secrets.RENDER_API_BASE_URL }}
+          EXPECTED: ${{ github.sha }}
         run: |
           if [ -z "$BASE" ]; then
-            echo "::notice::RENDER_API_BASE_URL not set — skipping post-deploy health check."
+            echo "::notice::RENDER_API_BASE_URL not set — skipping post-deploy verification."
             exit 0
           fi
-          # A deploy that starts is not a deploy that works. Poll readiness, which checks the
-          # database, so a broken migration or a bad connection string fails the pipeline
-          # instead of quietly leaving a dead instance serving 503s.
-          for i in $(seq 1 40); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/health/ready" || true)
+
+          # STEP 1: wait for the new BUILD, not merely for a healthy response.
+          #
+          # This step used to poll /health/ready alone, which reports on whichever instance is
+          # currently serving — during a rolling deploy, the one being replaced. It therefore
+          # passed within seconds against the OLD container and announced a healthy new
+          # deployment having verified nothing about it. That is not theoretical: a run reported
+          # success while the newly added endpoints still returned 404, and the new build only
+          # appeared about ninety seconds afterwards. A failed migration would have sailed
+          # through the same way.
+          echo "Waiting for commit ${EXPECTED} to be the one answering..."
+          for i in $(seq 1 60); do
+            reported=$(curl -s --max-time 30 "$BASE/health/version" \
+              | sed -n 's/.*"commit":"\([^"]*\)".*/\1/p')
+
+            if [ "$reported" = "$EXPECTED" ]; then
+              echo "Commit ${EXPECTED} is live after ~$((i * 15))s."
+              break
+            fi
+
+            if [ "$reported" = "unknown" ]; then
+              echo "::error::/health/version reports 'unknown' — RENDER_GIT_COMMIT is not set in"
+              echo "::error::the container, so a deploy cannot be distinguished from the previous"
+              echo "::error::build. Refusing to report success on an unverifiable deploy."
+              exit 1
+            fi
+
+            echo "attempt $i: serving '${reported:-<no response>}', waiting for ${EXPECTED}"
+
+            if [ "$i" -eq 60 ]; then
+              echo "::error::Commit ${EXPECTED} never became the serving build (waited ~15m)."
+              exit 1
+            fi
+            sleep 15
+          done
+
+          # STEP 2: now that the new build IS serving, confirm it can reach its dependencies.
+          # Readiness checks the database, so a broken migration or a bad connection string
+          # fails the pipeline rather than quietly leaving a dead instance serving 503s.
+          for i in $(seq 1 20); do
+            code=$(curl -s --max-time 30 -o /dev/null -w "%{http_code}" "$BASE/health/ready" || true)
             if [ "$code" = "200" ]; then
-              echo "Healthy after ~$((i * 15))s."
+              echo "New build is ready."
               exit 0
             fi
             echo "attempt $i: /health/ready returned $code"
             sleep 15
           done
-          echo "::error::New deployment never reported ready."
+
+          echo "::error::Commit ${EXPECTED} is serving but never reported ready."
           exit 1
 
   deploy-web:
