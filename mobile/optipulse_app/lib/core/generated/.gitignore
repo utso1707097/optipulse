@@ -25,7 +25,9 @@ doc/api/
 
 # Don't commit pubspec lock file
 # (Library packages only! Remove pattern if developing an application package)
-pubspec.lock
+# pubspec.lock is deliberately COMMITTED here: this generated client is
+# checked in and diffed by the contract drift gate, and its lock is what
+# keeps build_runner output reproducible across machines.
 
 # Don’t commit files and directories created by other development environments.
 # For example, if your development environment creates any of the following files,

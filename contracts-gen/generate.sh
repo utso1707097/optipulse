@@ -110,6 +110,19 @@ if find "$ROOT_DIR/mobile/optipulse_app/lib" -name '*.dart' -print -quit 2>/dev/
   if require_tool openapi-generator-cli "Requires a JRE; see T094. Install via 'npm i -g @openapitools/openapi-generator-cli'."; then
     DART_CLIENT="$ROOT_DIR/mobile/optipulse_app/lib/core/generated"
 
+    # The client's OWN lockfile is preserved across regeneration. Without this the wipe below
+    # deletes it, `dart pub get` re-resolves every transitive codegen dependency to whatever is
+    # newest, and the committed tree becomes a function of WHEN it was generated rather than of
+    # the spec. That is not hypothetical: source_gen moved 4.2.4 -> 4.3.0 between a local run
+    # and a CI run and failed the drift gate on a dependency bump that had nothing to do with
+    # the contract. A pinned generator whose own dependencies float is not pinned.
+    SAVED_LOCK="$(mktemp)"
+    if [ -f "$DART_CLIENT/pubspec.lock" ]; then
+      cp "$DART_CLIENT/pubspec.lock" "$SAVED_LOCK"
+    else
+      SAVED_LOCK=""
+    fi
+
     # Wipe before generating. openapi-generator writes files but never removes ones that are
     # no longer produced: when tags were added to the API, the previous single
     # opti_pulse_api_api.dart stopped being exported yet stayed on disk as committed dead
@@ -146,11 +159,36 @@ with open(path, "w") as f:
     f.write(text)
 NORMALISE
 
+    # The generator's own .gitignore excludes pubspec.lock, which is right for a hand-written
+    # library and wrong here: this tree is COMMITTED and diffed by the drift gate, so its lock
+    # is what keeps codegen reproducible. Left alone, a future `git rm` would untrack the lock
+    # and nothing would be able to add it back.
+    python3 - "$DART_CLIENT/.gitignore" <<'UNIGNORE'
+import sys
+path = sys.argv[1]
+with open(path) as f:
+    lines = f.readlines()
+with open(path, "w") as f:
+    for line in lines:
+        if line.strip() == "pubspec.lock":
+            f.write("# pubspec.lock is deliberately COMMITTED here: this generated client is\n")
+            f.write("# checked in and diffed by the contract drift gate, and its lock is what\n")
+            f.write("# keeps build_runner output reproducible across machines.\n")
+            continue
+        f.write(line)
+UNIGNORE
+
     # dart-dio emits built_value classes whose serialisers live in .g.dart parts that only
     # build_runner can produce. Without this step the client does not compile, so the
     # generated tree is committed in a state no one can build — and the drift gate would
     # still pass, because the spec and the emitted sources agree.
     if require_tool dart "Install the Flutter SDK (which bundles Dart); see mobile/optipulse_app/README.md."; then
+      # Restored BEFORE `pub get`, so resolution honours it rather than re-solving.
+      if [ -n "$SAVED_LOCK" ]; then
+        cp "$SAVED_LOCK" "$DART_CLIENT/pubspec.lock"
+        rm -f "$SAVED_LOCK"
+      fi
+
       (cd "$DART_CLIENT" \
         && dart pub get \
         && dart run build_runner build --delete-conflicting-outputs)

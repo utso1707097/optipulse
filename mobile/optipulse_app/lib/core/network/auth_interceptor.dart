@@ -66,13 +66,27 @@ class AuthInterceptor extends QueuedInterceptor {
     if (session.expiresWithin(const Duration(seconds: 30), now: DateTime.now())) {
       try {
         session = await _refreshOnce(session);
-      } on AuthFailure {
-        _onSessionLost();
+      } on AuthFailure catch (failure) {
+        // ONLY a server-side rejection ends the session. A network failure here means the
+        // refresh never reached OptiPulse, so the token is almost certainly still valid — and
+        // signing out on it is how a dropped packet, a tunnel, or a cold-starting free-tier
+        // instance turns into "please sign in again". On a phone that is constant.
+        if (failure.kind == AuthFailureKind.sessionExpired) {
+          _onSessionLost();
+        }
+
+        // The request still fails, but with the transport error rather than a fabricated 401,
+        // so callers can tell "we could not reach the server" from "you are signed out".
         return handler.reject(
           DioException(
             requestOptions: options,
-            type: DioExceptionType.badResponse,
-            response: Response(requestOptions: options, statusCode: 401),
+            type: failure.kind == AuthFailureKind.sessionExpired
+                ? DioExceptionType.badResponse
+                : DioExceptionType.connectionError,
+            error: failure,
+            response: failure.kind == AuthFailureKind.sessionExpired
+                ? Response(requestOptions: options, statusCode: 401)
+                : null,
           ),
         );
       }
@@ -101,8 +115,10 @@ class AuthInterceptor extends QueuedInterceptor {
     final AuthSession refreshed;
     try {
       refreshed = await _refreshOnce(session);
-    } on AuthFailure {
-      _onSessionLost();
+    } on AuthFailure catch (failure) {
+      // Same rule as above: a refresh that could not be delivered is not proof the session
+      // ended. Only the server saying so is.
+      if (failure.kind == AuthFailureKind.sessionExpired) _onSessionLost();
       return handler.next(err);
     }
 
@@ -125,7 +141,7 @@ class AuthInterceptor extends QueuedInterceptor {
     final existing = _inFlight;
     if (existing != null) return existing;
 
-    final future = _repository.refresh(session).then((refreshed) {
+    final future = _refreshWithRecovery(session).then((refreshed) {
       _onRefreshed(refreshed);
       return refreshed;
     }).whenComplete(() {
@@ -134,5 +150,29 @@ class AuthInterceptor extends QueuedInterceptor {
 
     _inFlight = future;
     return future;
+  }
+
+  /// Refreshes, and retries ONCE from the keystore if the in-memory token was stale.
+  ///
+  /// The gap this closes: the server rotates a refresh token and the device persists the
+  /// replacement, but the in-memory session can still be holding the old one — the process was
+  /// killed between the write and the state update, or this interceptor captured the session
+  /// before an earlier refresh landed. Presenting the old token then trips the backend's reuse
+  /// detection, which revokes the WHOLE family and signs the user out for good.
+  ///
+  /// So before accepting that verdict, re-read what is actually on disk. Retrying only when the
+  /// stored token DIFFERS is the essential part: retrying with the same token would be genuine
+  /// reuse, and would revoke the family for real.
+  Future<AuthSession> _refreshWithRecovery(AuthSession session) async {
+    try {
+      return await _repository.refresh(session);
+    } on AuthFailure catch (failure) {
+      if (failure.kind != AuthFailureKind.sessionExpired) rethrow;
+
+      final stored = await _repository.restore();
+      if (stored == null || stored.refreshToken == session.refreshToken) rethrow;
+
+      return _repository.refresh(stored);
+    }
   }
 }
