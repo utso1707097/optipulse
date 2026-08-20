@@ -89,6 +89,27 @@ public sealed class AlertDetectorTests
     }
 
     [Fact]
+    public void AStandingCondition_AlertsAgainInTheNextWindow()
+    {
+        // The other half of deduplication, and the reason the window is a fixed bucket rather
+        // than a "seen recently" flag: a condition that is STILL happening fifteen minutes later
+        // is worth saying again. Suppressing it forever would mean an incident that started
+        // while nobody was looking never gets re-reported.
+        //
+        // This is also what made an integration test flaky: two observations a minute apart
+        // share a bucket only when they fall inside the same window, so a test using the wall
+        // clock failed whenever it ran near a boundary. The behaviour is right; asserting it
+        // against real time was not.
+        var justBeforeBoundary = new DateTimeOffset(2026, 8, 19, 12, 14, 30, TimeSpan.Zero);
+        var justAfter = new DateTimeOffset(2026, 8, 19, 12, 15, 30, TimeSpan.Zero);
+
+        var before = AlertDetector.ErrorRateSpike("f", 120, 1_000, justBeforeBoundary, Defaults)!;
+        var after = AlertDetector.ErrorRateSpike("f", 120, 1_000, justAfter, Defaults)!;
+
+        after.DedupeKey.Should().NotBe(before.DedupeKey);
+    }
+
+    [Fact]
     public void AnomalousExposure_WithinTolerance_IsNotReported()
     {
         // 52% observed against a 50% target is ordinary sampling noise.

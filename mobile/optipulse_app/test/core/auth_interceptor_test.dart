@@ -11,10 +11,12 @@ import 'package:optipulse_app/features/auth/domain/auth_session.dart';
 /// rather than inferred. A mock that returns instantly would let a broken implementation pass:
 /// the second caller would arrive after the first had already finished.
 class _RecordingRepository implements AuthRepository {
-  _RecordingRepository({this.failRefresh = false});
+  _RecordingRepository({this.failRefresh = false, this.failureKind});
 
   final bool failRefresh;
+  final AuthFailureKind? failureKind;
   int refreshCalls = 0;
+  AuthSession? storedSession;
   final _gate = Completer<void>();
 
   void releaseRefresh() => _gate.complete();
@@ -23,7 +25,12 @@ class _RecordingRepository implements AuthRepository {
   Future<AuthSession> refresh(AuthSession session) async {
     refreshCalls++;
     await _gate.future;
-    if (failRefresh) throw const AuthFailure.sessionExpired();
+    if (failRefresh) {
+      throw switch (failureKind ?? AuthFailureKind.sessionExpired) {
+        AuthFailureKind.network => const AuthFailure.network(),
+        _ => const AuthFailure.sessionExpired(),
+      };
+    }
     return session.copyWith(
       accessToken: 'refreshed-${session.accessToken}',
       refreshToken: 'rotated',
@@ -37,7 +44,7 @@ class _RecordingRepository implements AuthRepository {
   @override
   Future<void> logOut(AuthSession? session) async {}
   @override
-  Future<AuthSession?> restore() async => null;
+  Future<AuthSession?> restore() async => storedSession;
   @override
   Future<void> persist(AuthSession session) async {}
 }
@@ -137,6 +144,79 @@ void main() {
     expect(repository.refreshCalls, 1, reason: 'terminal failure must not be retried');
   });
 
+  test('a NETWORK failure during refresh does not sign the user out', () async {
+    // THE BUG THIS GUARDS. Every AuthFailure used to end the session, so a refresh that never
+    // reached the server — flaky signal, a tunnel, a cold-starting free-tier instance — logged
+    // the user out. The token was almost certainly still valid; nobody had said otherwise.
+    final repository = _RecordingRepository(
+      failRefresh: true,
+      failureKind: AuthFailureKind.network,
+    )..releaseRefresh();
+    var lost = false;
+
+    final interceptor = AuthInterceptor(
+      repository: repository,
+      readSession: () => _session(ttl: const Duration(seconds: 1)),
+      onRefreshed: (_) {},
+      onSessionLost: () => lost = true,
+    );
+
+    final handler = _CapturingHandler();
+    await interceptor.onRequest(RequestOptions(path: '/api/v1/flags'), handler);
+
+    expect(lost, isFalse, reason: 'a dropped packet is not proof the session ended');
+    expect(handler.rejected, isTrue, reason: 'the request still fails');
+  });
+
+  test('a stale in-memory token is recovered from the keystore before giving up', () async {
+    // The server rotated the token and the device persisted it, but the in-memory copy is
+    // older — the process died between the two, or this interceptor captured the session
+    // first. Presenting the old one trips reuse detection and revokes the whole family.
+    var attempts = 0;
+    final repository = _StaleTokenRepository(
+      stored: _session().copyWith(refreshToken: 'newer-token'),
+      onRefresh: () => attempts++,
+    );
+    var lost = false;
+
+    final interceptor = AuthInterceptor(
+      repository: repository,
+      readSession: () => _session(ttl: const Duration(seconds: 1)),
+      onRefreshed: (_) {},
+      onSessionLost: () => lost = true,
+    );
+
+    final handler = _CapturingHandler();
+    await interceptor.onRequest(RequestOptions(path: '/api/v1/flags'), handler);
+
+    expect(attempts, 2, reason: 'one failed attempt, then one with the stored token');
+    expect(lost, isFalse);
+    expect(handler.options!.headers['Authorization'], 'Bearer recovered');
+  });
+
+  test('recovery does NOT retry when the keystore holds the same token', () async {
+    // Retrying with the identical token would be genuine reuse, and would revoke the family
+    // for real. Recovery is only valid when the stored token actually differs.
+    // Inside the 30s margin, so a proactive refresh actually fires.
+    final same = _session(ttl: const Duration(seconds: 1));
+    final repository = _RecordingRepository(failRefresh: true)
+      ..releaseRefresh()
+      ..storedSession = same;
+    var lost = false;
+
+    final interceptor = AuthInterceptor(
+      repository: repository,
+      readSession: () => same,
+      onRefreshed: (_) {},
+      onSessionLost: () => lost = true,
+    );
+
+    await interceptor.onRequest(RequestOptions(path: '/api/v1/flags'), _CapturingHandler());
+
+    expect(repository.refreshCalls, 1, reason: 'must not present the same token twice');
+    expect(lost, isTrue, reason: 'nothing left to recover with');
+  });
+
   test('an already-retried request is not retried again', () async {
     // Without this, a server returning 401 for any token loops forever.
     final repository = _RecordingRepository()..releaseRefresh();
@@ -163,6 +243,34 @@ void main() {
     expect(repository.refreshCalls, 0);
     expect(handler.passedThrough, isTrue);
   });
+}
+
+/// Fails the first refresh as expired, then succeeds with whatever the keystore holds.
+class _StaleTokenRepository implements AuthRepository {
+  _StaleTokenRepository({required this.stored, required this.onRefresh});
+
+  final AuthSession stored;
+  final void Function() onRefresh;
+  var _attempts = 0;
+
+  @override
+  Future<AuthSession> refresh(AuthSession session) async {
+    onRefresh();
+    _attempts++;
+    if (_attempts == 1) throw const AuthFailure.sessionExpired();
+    return session.copyWith(accessToken: 'recovered');
+  }
+
+  @override
+  Future<AuthSession?> restore() async => stored;
+
+  @override
+  Future<AuthSession> logIn({required String email, required String password}) async =>
+      throw UnimplementedError();
+  @override
+  Future<void> logOut(AuthSession? session) async {}
+  @override
+  Future<void> persist(AuthSession session) async {}
 }
 
 class _CapturingHandler extends RequestInterceptorHandler {

@@ -87,11 +87,22 @@ public sealed class AlertHistoryTests(OptiPulseTestFixture fixture)
         await store.RegisterDeviceAsync(Guid.CreateVersion7(), DevicePlatform.Ios, $"tok-{Guid.NewGuid():N}");
 
         var flagKey = $"standing-{Guid.NewGuid():N}";
-        var now = DateTimeOffset.UtcNow;
         var thresholds = new AlertThresholds();
+
+        // TIME IS PINNED, and must stay pinned. The dedupe key buckets on absolute time
+        // (ticks / windowLength), so two observations a minute apart share a bucket only when
+        // they fall inside the same 15-minute window. With DateTimeOffset.UtcNow this test
+        // failed whenever it happened to run within a minute of :00, :15, :30 or :45 — about
+        // one run in fifteen, and it did exactly that on main at 16:29:42.
+        //
+        // Straddling the boundary is CORRECT behaviour, not a bug: a condition that is still
+        // standing after fifteen minutes should alert again. What was wrong was asserting
+        // deduplication while letting the wall clock decide whether deduplication applied.
+        var now = new DateTimeOffset(2026, 8, 19, 12, 0, 0, TimeSpan.Zero);
 
         var first = await dispatcher.DispatchAsync(
             AlertDetector.ErrorRateSpike(flagKey, 120, 1_000, now, thresholds)!);
+        // Same 15-minute window as `now` by construction, not by luck.
         var second = await dispatcher.DispatchAsync(
             AlertDetector.ErrorRateSpike(flagKey, 130, 1_000, now.AddMinutes(1), thresholds)!);
 
