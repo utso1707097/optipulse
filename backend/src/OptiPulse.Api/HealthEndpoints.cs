@@ -25,6 +25,26 @@ public static class HealthEndpoints
             .AllowAnonymous()
             .ExcludeFromDescription();
 
+        // Which BUILD is answering, as opposed to whether something is answering.
+        //
+        // The deploy pipeline previously verified a release by polling /health/ready, which
+        // reports on whichever instance is currently serving — during a rolling deploy, the OLD
+        // one. So the check passed instantly against the container being replaced and announced
+        // that the new deployment was healthy having tested nothing about it. Observed directly:
+        // CI reported a successful deploy while the new endpoints were still returning 404, and
+        // the new build appeared roughly ninety seconds later.
+        //
+        // Render injects RENDER_GIT_COMMIT into the running container, so the pipeline can poll
+        // until the commit it just deployed is the one answering. Anonymous on purpose — a
+        // readiness gate that needs a credential is a gate that fails for the wrong reasons —
+        // and a commit SHA is already public in a public repository.
+        app.MapGet("/health/version", () => Results.Ok(new
+        {
+            commit = Environment.GetEnvironmentVariable("RENDER_GIT_COMMIT") ?? "unknown",
+        }))
+            .AllowAnonymous()
+            .ExcludeFromDescription();
+
         app.MapGet("/health/ready", async (
             FlagsDbContext flags, ISnapshotStore snapshot, CancellationToken ct) =>
         {
